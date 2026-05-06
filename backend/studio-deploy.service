@@ -1,0 +1,16 @@
+[Unit]
+Description=Studio Booking auto-deploy poller (GitHub origin/main)
+After=network-online.target studio.service
+
+[Service]
+Type=simple
+User=range
+WorkingDirectory=/home/range/studio_booking
+ExecStart=/home/range/studio_booking/scripts/auto-deploy.sh
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/studio-deploy.log
+StandardError=append:/var/log/studio-deploy.log
+
+[Install]
+WantedBy=multi-user.target
