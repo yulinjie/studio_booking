@@ -73,6 +73,19 @@ async function createOne() {
     const body = { ...oneForm.value }
     if (!body.coach_id) delete body.coach_id
     if (!body.capacity) delete body.capacity
+
+    // 先 dry-run 检查冲突
+    const check = await api.post('/admin/sessions/check-conflict', body).catch(() => ({ ok: true, conflicts: [] }))
+    if (!check.ok && check.conflicts.length) {
+      const c = check.conflicts[0]
+      try {
+        await ElMessageBox.confirm(
+          `检测到${c.reason}冲突：\n${c.course_name}\n${c.start_at.slice(0, 16).replace('T', ' ')}\n${c.room ? '教室 ' + c.room : ''}\n\n仍要创建吗？`,
+          '冲突警告',
+          { type: 'warning', confirmButtonText: '强制创建', cancelButtonText: '取消' },
+        )
+      } catch { return }
+    }
     await api.post('/admin/sessions', body)
     ElMessage.success('已排课')
     showOne.value = false

@@ -376,6 +376,54 @@ def list_sessions(
     return session.exec(stmt.order_by(ClassSession.start_at)).all()
 
 
+def _detect_conflicts(
+    session: Session,
+    start_at: datetime,
+    end_at: datetime,
+    coach_id: Optional[int],
+    room: Optional[str],
+    exclude_session_id: Optional[int] = None,
+) -> List[dict]:
+    """返回与该时间段冲突的现有 scheduled 课节（同教练或同教室）"""
+    stmt = select(ClassSession).where(
+        ClassSession.status == ClassSessionStatus.scheduled,
+        ClassSession.start_at < end_at,
+        ClassSession.end_at > start_at,
+    )
+    if exclude_session_id is not None:
+        stmt = stmt.where(ClassSession.id != exclude_session_id)
+    overlaps = session.exec(stmt).all()
+    courses_map = {c.id: c for c in session.exec(select(Course)).all()}
+    out = []
+    for o in overlaps:
+        is_coach_clash = coach_id is not None and o.coach_id == coach_id
+        is_room_clash = bool(room and o.room and o.room == room)
+        if not (is_coach_clash or is_room_clash):
+            continue
+        c = courses_map.get(o.course_id)
+        out.append({
+            "id": o.id,
+            "course_name": c.name if c else "?",
+            "start_at": o.start_at.isoformat(),
+            "end_at": o.end_at.isoformat(),
+            "room": o.room,
+            "coach_id": o.coach_id,
+            "reason": "教练" if is_coach_clash else "教室",
+        })
+    return out
+
+
+@router.post("/admin/sessions/check-conflict", dependencies=[Depends(require_staff)])
+def check_session_conflict(body: SessionIn, session: Session = Depends(get_session)):
+    """干跑检查 — 不真创建，只看会不会冲突。前端排课前调一下。"""
+    course = session.get(Course, body.course_id)
+    if not course:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "课程不存在")
+    end_at = body.end_at or (body.start_at + timedelta(minutes=course.duration_minutes))
+    conflicts = _detect_conflicts(session, body.start_at, end_at, body.coach_id, body.room)
+    return {"conflicts": conflicts, "ok": not conflicts}
+
+
 @router.post("/admin/sessions", response_model=SessionOut, dependencies=[Depends(require_staff)])
 def create_session(body: SessionIn, session: Session = Depends(get_session)):
     course = session.get(Course, body.course_id)
@@ -386,6 +434,13 @@ def create_session(body: SessionIn, session: Session = Depends(get_session)):
     if body.coach_id is not None:
         if not session.get(Coach, body.coach_id):
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "教练不存在")
+    conflicts = _detect_conflicts(session, body.start_at, end_at, body.coach_id, body.room)
+    if conflicts:
+        c = conflicts[0]
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"{c['reason']}冲突：{c['course_name']} {c['start_at'][:16].replace('T',' ')}（room={c['room']}）",
+        )
     cs = ClassSession(
         course_id=course.id,
         coach_id=body.coach_id,
