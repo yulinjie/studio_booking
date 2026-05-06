@@ -16,6 +16,9 @@ const showOne = ref(false)
 const oneForm = ref({})
 const showBatch = ref(false)
 const batchForm = ref({})
+const showClone = ref(false)
+const cloneForm = ref({})
+const cloning = ref(false)
 
 const weekStart = computed(() => dayjs().startOf('week').add(1, 'day').add(weekOffset.value * 7, 'day'))
 const weekEnd = computed(() => weekStart.value.add(7, 'day'))
@@ -101,6 +104,41 @@ async function createBatch() {
   } catch (e) { ElMessage.error(e.message) }
 }
 
+function openClone() {
+  cloneForm.value = {
+    mode: 'this_to_next',           // this_to_next | last_to_this | custom
+    offset_days: 7,
+  }
+  showClone.value = true
+}
+
+async function doClone() {
+  cloning.value = true
+  try {
+    let from_start, from_end, offset_days
+    if (cloneForm.value.mode === 'this_to_next') {
+      from_start = weekStart.value.toISOString()
+      from_end = weekEnd.value.toISOString()
+      offset_days = 7
+    } else if (cloneForm.value.mode === 'last_to_this') {
+      from_start = weekStart.value.subtract(7, 'day').toISOString()
+      from_end = weekStart.value.toISOString()
+      offset_days = 7
+    } else {
+      from_start = weekStart.value.toISOString()
+      from_end = weekEnd.value.toISOString()
+      offset_days = cloneForm.value.offset_days
+    }
+    const r = await api.post('/admin/sessions/clone-range', {
+      from_start, from_end, offset_days,
+    })
+    ElMessage.success(`已克隆 ${r.cloned} 节课${r.skipped ? `（跳过 ${r.skipped} 节已取消）` : ''}`)
+    showClone.value = false
+    if (cloneForm.value.mode === 'this_to_next') weekOffset.value++
+    await load()
+  } catch (e) { ElMessage.error(e.message) } finally { cloning.value = false }
+}
+
 async function cancel(s) {
   await ElMessageBox.confirm(`取消整节课？已预约会员需要手工返还卡次`, '确认', { type: 'warning' })
   await api.post(`/admin/sessions/${s.id}/cancel`)
@@ -161,6 +199,7 @@ onMounted(load)
       </template>
       <div style="flex: 1"></div>
       <el-button @click="exportCsv">导出预约 CSV</el-button>
+      <el-button @click="openClone">📋 克隆排课</el-button>
       <el-button type="primary" @click="openOne(weekStart, 19)">+ 单节排课</el-button>
       <el-button type="success" @click="openBatch">+ 批量循环</el-button>
     </div>
@@ -251,6 +290,37 @@ onMounted(load)
       <template #footer>
         <el-button @click="showOne = false">取消</el-button>
         <el-button type="primary" @click="createOne">创建</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 克隆 -->
+    <el-dialog v-model="showClone" title="克隆排课" width="500px">
+      <el-alert type="info" show-icon :closable="false" style="margin-bottom: 14px">
+        把整周排课（含教练 / 教室 / 容量 / 课程）一键复制到目标周。已有预约/已结/已取消不会被克隆，新课表都是空状态。
+      </el-alert>
+      <el-form label-width="100px">
+        <el-form-item label="克隆方式">
+          <el-radio-group v-model="cloneForm.mode">
+            <el-radio value="this_to_next">本周 → 下周</el-radio>
+            <el-radio value="last_to_this">上周 → 本周</el-radio>
+            <el-radio value="custom">自定义偏移</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="cloneForm.mode === 'custom'" label="偏移天数">
+          <el-input-number v-model="cloneForm.offset_days" :step="7" :min="1" :max="365" />
+          <span class="hint" style="margin-left: 8px; font-size: 11px; color: #888">本周复制到 {{ cloneForm.offset_days }} 天后</span>
+        </el-form-item>
+        <el-form-item label="源 / 目标">
+          <span style="font-size: 12px; color: var(--ys-text-muted)">
+            {{ weekStart.format('M月D日') }} - {{ weekEnd.subtract(1, 'day').format('M月D日') }}
+            →
+            {{ (cloneForm.mode === 'last_to_this' ? weekStart : weekStart.add(cloneForm.mode === 'custom' ? cloneForm.offset_days : 7, 'day')).format('M月D日') }} 起
+          </span>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showClone = false">取消</el-button>
+        <el-button type="primary" :loading="cloning" @click="doClone">确认克隆</el-button>
       </template>
     </el-dialog>
 

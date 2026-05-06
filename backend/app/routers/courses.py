@@ -369,6 +369,63 @@ def update_session(
     return cs
 
 
+class CloneRangeIn(BaseModel):
+    """克隆指定时间区间的所有 scheduled 排课到目标偏移天数"""
+    from_start: datetime          # 源区间起（含）
+    from_end: datetime            # 源区间止（不含）
+    offset_days: int              # 目标 = 源 + offset 天（如 7 = 下周同时间）
+    course_ids: Optional[List[int]] = None       # 可选过滤；空 = 全部
+    skip_finished: bool = True    # 跳过已结/已取消的源
+    only_status: List[ClassSessionStatus] = [ClassSessionStatus.scheduled, ClassSessionStatus.finished]
+
+
+class CloneResult(BaseModel):
+    cloned: int
+    skipped: int
+    new_session_ids: List[int]
+
+
+@router.post("/admin/sessions/clone-range", response_model=CloneResult, dependencies=[Depends(require_staff)])
+def clone_range(body: CloneRangeIn, session: Session = Depends(get_session)):
+    """
+    例如克隆"本周（5-7~5-14）"到下周：from_start=2026-05-07, from_end=2026-05-14, offset_days=7
+    返回新建的 session_id 列表。教练 / 教室 / 容量 / 课程都保留。
+    """
+    stmt = select(ClassSession).where(
+        ClassSession.start_at >= body.from_start,
+        ClassSession.start_at < body.from_end,
+    )
+    if body.course_ids:
+        stmt = stmt.where(ClassSession.course_id.in_(body.course_ids))
+
+    sources = session.exec(stmt).all()
+    new_ids = []
+    skipped = 0
+    delta = timedelta(days=body.offset_days)
+
+    for src in sources:
+        if body.skip_finished and src.status not in body.only_status:
+            skipped += 1
+            continue
+        new_session = ClassSession(
+            course_id=src.course_id,
+            coach_id=src.coach_id,
+            start_at=src.start_at + delta,
+            end_at=src.end_at + delta,
+            capacity=src.capacity,
+            booked_count=0,
+            room=src.room,
+            note=src.note,
+            status=ClassSessionStatus.scheduled,
+        )
+        session.add(new_session)
+        session.flush()
+        new_ids.append(new_session.id)
+
+    session.commit()
+    return CloneResult(cloned=len(new_ids), skipped=skipped, new_session_ids=new_ids)
+
+
 @router.post("/admin/sessions/{sid}/cancel")
 def cancel_session(
     sid: int,
