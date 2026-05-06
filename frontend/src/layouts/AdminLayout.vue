@@ -50,6 +50,7 @@ const NAV = [
   { group: '系统', items: [
     { path: '/admin/settings',    icon: 'settings',          label: '设置' },
     { path: '/admin/audit-logs',  icon: 'scroll-text',       label: '操作日志' },
+    { path: '/admin/backups',     icon: 'database',          label: '数据备份' },
   ]},
 ]
 </script>

@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from .config import settings
 from .database import init_db
-from .routers import auth, members, cards, courses, bookings, admin, payroll, growth, share, coupons, reports, evaluations, topup, birthday
+from .routers import auth, members, cards, courses, bookings, admin, payroll, growth, share, coupons, reports, evaluations, topup, birthday, backups
 
 
 @asynccontextmanager
@@ -46,6 +46,7 @@ app.include_router(reports.practice_router)
 app.include_router(evaluations.router)
 app.include_router(topup.router)
 app.include_router(birthday.router)
+app.include_router(backups.router)
 
 
 # ===== 用户上传文件目录 =====

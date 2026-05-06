@@ -179,6 +179,18 @@ $APP_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl status studio
 EOF
 sudo chmod 0440 /etc/sudoers.d/studio-deploy
 
+# ---------- 9.5 自动备份（systemd timer 每天 03:00） ----------
+cyan "[9.5/9] 配置每日自动备份..."
+chmod +x "$APP_DIR/scripts/auto-backup.sh" 2>/dev/null || true
+mkdir -p "$HOME/backups"
+sudo cp "$APP_DIR/backend/studio-backup.service" /etc/systemd/system/
+sudo cp "$APP_DIR/backend/studio-backup.timer"   /etc/systemd/system/
+sudo touch /var/log/studio-backup.log
+sudo chown range:range /var/log/studio-backup.log 2>/dev/null || true
+sudo systemctl daemon-reload
+sudo systemctl enable --now studio-backup.timer
+green "已开启：每天 03:00 自动备份到 ~/backups/，保留 30 份"
+
 # ---------- 收尾 ----------
 echo
 green "========================================"

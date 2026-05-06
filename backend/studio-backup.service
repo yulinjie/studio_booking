@@ -1,0 +1,11 @@
+[Unit]
+Description=Studio Booking daily backup
+After=studio.service
+
+[Service]
+Type=oneshot
+User=range
+WorkingDirectory=/home/range/studio_booking
+ExecStart=/home/range/studio_booking/scripts/auto-backup.sh
+StandardOutput=append:/var/log/studio-backup.log
+StandardError=append:/var/log/studio-backup.log

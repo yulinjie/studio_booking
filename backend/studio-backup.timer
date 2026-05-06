@@ -1,0 +1,10 @@
+[Unit]
+Description=Studio Booking daily backup at 03:00
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true               # 错过启动时间会立即补跑（如断电）
+RandomizedDelaySec=300        # 随机抖动 5 分钟，避免规律性
+
+[Install]
+WantedBy=timers.target
