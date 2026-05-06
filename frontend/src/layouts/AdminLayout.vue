@@ -41,6 +41,7 @@ const NAV = [
   { group: '管理', items: [
     { path: '/admin/members',     icon: 'users',             label: '会员' },
     { path: '/admin/at-risk',     icon: 'alert-triangle',    label: '流失预警' },
+    { path: '/admin/birthday',    icon: 'cake',              label: '生日礼遇' },
     { path: '/admin/coaches',     icon: 'user-cog',          label: '教练' },
     { path: '/admin/cards',       icon: 'credit-card',       label: '卡种' },
     { path: '/admin/courses',     icon: 'book-open',         label: '课程' },
