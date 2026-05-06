@@ -94,7 +94,7 @@ def _build_qr(text: str, size: int = 150) -> Image.Image:
     return img.resize((size, size), Image.LANCZOS)
 
 
-@router.get("/share/poster/{booking_id}.png")
+@router.get("/share/poster/{booking_id}")
 def share_poster(
     booking_id: int,
     request: Request,

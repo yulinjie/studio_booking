@@ -64,7 +64,7 @@ async function openPoster(b) {
   showPoster.value = true
   posterUrl.value = ''
   try {
-    const r = await fetch(`/api/share/poster/${b.id}.png`, {
+    const r = await fetch(`/api/share/poster/${b.id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     })
     if (!r.ok) throw new Error('海报生成失败')
