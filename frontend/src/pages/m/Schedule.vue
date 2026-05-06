@@ -166,7 +166,7 @@ function statusText(s) {
           <div class="info">
             <div class="title">{{ courseName(s.course_id) }}</div>
             <div class="meta">
-              <span v-if="coachTitle(s.coach_id)">{{ coachTitle(s.coach_id) }}</span>
+              <span v-if="s.coach_id" class="coach-link" @click.stop="$router.push(`/m/coach/${s.coach_id}`)">{{ coachTitle(s.coach_id) || '教练' }} ›</span>
               <span v-if="s.room">· {{ s.room }}</span>
             </div>
             <div class="cap">
@@ -358,6 +358,11 @@ function statusText(s) {
   color: var(--ys-text-muted);
   margin-top: 2px;
 }
+.coach-link {
+  color: var(--ys-primary-deep);
+  cursor: pointer;
+}
+.coach-link:active { opacity: 0.6; }
 .cap {
   display: flex;
   align-items: center;

@@ -37,6 +37,7 @@ const routes = [
       { path: 'home', component: () => import('../pages/m/Home.vue') },
       { path: 'schedule', component: () => import('../pages/m/Schedule.vue') },
       { path: 'course/:id', component: () => import('../pages/m/CourseDetail.vue'), props: true },
+      { path: 'coach/:id', component: () => import('../pages/m/CoachProfile.vue'), props: true },
       { path: 'my-bookings', component: () => import('../pages/m/MyBookings.vue') },
       { path: 'my-cards', component: () => import('../pages/m/MyCards.vue') },
       { path: 'my-coupons', component: () => import('../pages/m/MyCoupons.vue') },

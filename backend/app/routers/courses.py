@@ -183,6 +183,98 @@ def list_coaches(session: Session = Depends(get_session), _: User = Depends(get_
     return session.exec(select(Coach).where(Coach.is_active == True).order_by(Coach.id.desc())).all()
 
 
+class CoachProfile(BaseModel):
+    """教练公开主页 — 给会员端看的"""
+    id: int
+    user_id: int
+    name: str
+    avatar: Optional[str] = None
+    title: Optional[str] = None
+    bio: Optional[str] = None
+    specialties: Optional[str] = None
+    is_active: bool
+
+    avg_rating: Optional[float] = None         # 平均评分（保留 1 位小数）
+    rating_count: int                          # 评分人数
+    total_sessions_taught: int                 # 历史带过的课节数（finished）
+    upcoming_sessions: List[dict]              # 未来 14 天的可约课节（含 course/room/cap/booked）
+
+
+@router.get("/coaches/{coach_id}/profile", response_model=CoachProfile)
+def get_coach_profile(
+    coach_id: int,
+    session: Session = Depends(get_session),
+    _: User = Depends(get_current_user),
+):
+    from datetime import datetime, timedelta
+    from sqlalchemy import func as sa_func
+    from ..models import Booking, BookingStatus, Evaluation
+
+    coach = session.get(Coach, coach_id)
+    if not coach:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "教练不存在")
+    user = session.get(User, coach.user_id)
+
+    # 评分：取该教练所有 finished 课的所有 evaluation 的均值
+    # Evaluation.booking → Booking → ClassSession.coach_id
+    eval_rows = session.exec(
+        select(Evaluation, Booking, ClassSession)
+        .join(Booking, Booking.id == Evaluation.booking_id)
+        .join(ClassSession, ClassSession.id == Booking.session_id)
+        .where(ClassSession.coach_id == coach_id)
+    ).all()
+    avg_rating = None
+    rating_count = len(eval_rows)
+    if rating_count > 0:
+        avg_rating = round(sum(e[0].rating for e in eval_rows) / rating_count, 1)
+
+    # 历史已结课节数
+    total_sessions = session.exec(
+        select(sa_func.count(ClassSession.id)).where(
+            ClassSession.coach_id == coach_id,
+            ClassSession.status == ClassSessionStatus.finished,
+        )
+    ).one()
+
+    # 未来 14 天可约课节
+    now = datetime.utcnow()
+    end = now + timedelta(days=14)
+    upcoming = session.exec(
+        select(ClassSession).where(
+            ClassSession.coach_id == coach_id,
+            ClassSession.start_at >= now,
+            ClassSession.start_at < end,
+            ClassSession.status == ClassSessionStatus.scheduled,
+        ).order_by(ClassSession.start_at)
+    ).all()
+    courses_map = {c.id: c for c in session.exec(select(Course)).all()}
+    upcoming_out = [{
+        "id": s.id,
+        "course_id": s.course_id,
+        "course_name": (courses_map.get(s.course_id) or Course(name="?")).name if courses_map.get(s.course_id) else "?",
+        "start_at": s.start_at.isoformat(),
+        "end_at": s.end_at.isoformat(),
+        "capacity": s.capacity,
+        "booked_count": s.booked_count,
+        "room": s.room,
+    } for s in upcoming]
+
+    return CoachProfile(
+        id=coach.id,
+        user_id=coach.user_id,
+        name=user.name if user else "?",
+        avatar=user.avatar if user else None,
+        title=coach.title,
+        bio=coach.bio,
+        specialties=coach.specialties,
+        is_active=coach.is_active,
+        avg_rating=avg_rating,
+        rating_count=rating_count,
+        total_sessions_taught=total_sessions,
+        upcoming_sessions=upcoming_out,
+    )
+
+
 @router.post("/admin/coaches", response_model=Coach, dependencies=[Depends(require_admin)])
 def create_coach(body: CoachIn, session: Session = Depends(get_session)):
     user = session.get(User, body.user_id)
