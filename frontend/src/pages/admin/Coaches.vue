@@ -6,7 +6,10 @@ import api from '../../api/client'
 const coaches = ref([])
 const candidates = ref([])
 const showCreate = ref(false)
+const showEdit = ref(false)
+const editing = ref(null)
 const form = ref({})
+const editForm = ref({})
 
 const uploadHeaders = { Authorization: `Bearer ${localStorage.getItem('token')}` }
 
@@ -19,8 +22,35 @@ async function load() {
 }
 
 function openCreate() {
-  form.value = { user_id: candidates.value[0]?.id, title: '', bio: '', specialties: '', is_active: true, avatar: '' }
+  form.value = {
+    user_id: candidates.value[0]?.id, title: '', bio: '', specialties: '', is_active: true, avatar: '',
+    base_salary: 0, pay_per_session: 0, commission_bps: 0, pay_per_attendee: 0,
+  }
   showCreate.value = true
+}
+
+function openEdit(coach) {
+  editing.value = coach
+  editForm.value = {
+    title: coach.title || '',
+    bio: coach.bio || '',
+    specialties: coach.specialties || '',
+    base_salary: coach.base_salary || 0,
+    pay_per_session: coach.pay_per_session || 0,
+    commission_bps: coach.commission_bps || 0,
+    pay_per_attendee: coach.pay_per_attendee || 0,
+    is_active: coach.is_active,
+  }
+  showEdit.value = true
+}
+
+async function saveEdit() {
+  try {
+    await api.patch(`/admin/coaches/${editing.value.id}`, editForm.value)
+    ElMessage.success('已保存')
+    showEdit.value = false
+    await load()
+  } catch (e) { ElMessage.error(e.message) }
 }
 
 async function save() {
@@ -73,7 +103,7 @@ onMounted(async () => { await loadUserMap(); await load() })
     </div>
 
     <div v-else class="grid">
-      <div v-for="c in coaches" :key="c.id" class="coach-card">
+      <div v-for="c in coaches" :key="c.id" class="coach-card" @click="openEdit(c)">
         <div class="avatar-block">
           <img v-if="userAvatar(c.user_id)" :src="userAvatar(c.user_id)" class="avatar-img" />
           <div v-else class="avatar-fallback">{{ userName(c.user_id)[0] }}</div>
@@ -87,6 +117,13 @@ onMounted(async () => { await loadUserMap(); await load() })
             <span v-for="t in c.specialties.split(/[,，、]\s*/)" :key="t" class="tag">{{ t }}</span>
           </div>
           <div v-if="c.bio" class="bio">{{ c.bio }}</div>
+          <div class="salary-line" v-if="c.base_salary || c.pay_per_session || c.commission_bps">
+            💰
+            <span v-if="c.base_salary">底 ¥{{ (c.base_salary/100).toFixed(0) }}</span>
+            <span v-if="c.pay_per_session">· 课时 ¥{{ (c.pay_per_session/100).toFixed(0) }}</span>
+            <span v-if="c.commission_bps">· 提 {{ (c.commission_bps/100).toFixed(1) }}%</span>
+          </div>
+          <div v-else class="salary-empty">💡 点击设置薪酬</div>
         </div>
       </div>
     </div>
@@ -116,10 +153,64 @@ onMounted(async () => { await loadUserMap(); await load() })
         <el-form-item label="简介">
           <el-input v-model="form.bio" type="textarea" :rows="3" placeholder="教练自我介绍 / 资历" />
         </el-form-item>
+
+        <el-divider>薪酬配置（可空，后期再设）</el-divider>
+        <el-form-item label="月度底薪">
+          <el-input-number v-model="form.base_salary" :step="100000" :min="0" />
+          <span class="hint">分。¥{{ (form.base_salary/100 || 0).toFixed(2) }}</span>
+        </el-form-item>
+        <el-form-item label="每节课时费">
+          <el-input-number v-model="form.pay_per_session" :step="5000" :min="0" />
+          <span class="hint">分。¥{{ (form.pay_per_session/100 || 0).toFixed(2) }} / 节</span>
+        </el-form-item>
+        <el-form-item label="每人头补贴">
+          <el-input-number v-model="form.pay_per_attendee" :step="500" :min="0" />
+          <span class="hint">分。¥{{ (form.pay_per_attendee/100 || 0).toFixed(2) }} / 人</span>
+        </el-form-item>
+        <el-form-item label="课程价提成">
+          <el-input-number v-model="form.commission_bps" :step="100" :min="0" :max="10000" />
+          <span class="hint">基点（100=1%）。当前 {{ (form.commission_bps/100 || 0).toFixed(2) }}%</span>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showCreate = false">取消</el-button>
         <el-button type="primary" @click="save">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="showEdit" :title="`编辑教练 ${userName(editing?.user_id)}`" width="500px">
+      <el-form label-width="100px" v-if="editing">
+        <el-form-item label="头衔"><el-input v-model="editForm.title" /></el-form-item>
+        <el-form-item label="擅长"><el-input v-model="editForm.specialties" placeholder="多个用逗号分隔" /></el-form-item>
+        <el-form-item label="简介"><el-input v-model="editForm.bio" type="textarea" :rows="3" /></el-form-item>
+        <el-form-item label="状态">
+          <el-switch v-model="editForm.is_active" active-text="在职" inactive-text="离职" />
+        </el-form-item>
+
+        <el-divider>薪酬配置</el-divider>
+        <el-alert type="info" show-icon :closable="false" style="margin-bottom: 14px">
+          工资 = 底薪 + Σ(课时费 + 签到 × 人头补贴 + 签到 × 课程价 × 提成%)。改完保存后下个月报表生效。
+        </el-alert>
+        <el-form-item label="月度底薪">
+          <el-input-number v-model="editForm.base_salary" :step="100000" :min="0" />
+          <span class="hint">分。¥{{ (editForm.base_salary/100 || 0).toFixed(2) }}</span>
+        </el-form-item>
+        <el-form-item label="每节课时费">
+          <el-input-number v-model="editForm.pay_per_session" :step="5000" :min="0" />
+          <span class="hint">分。¥{{ (editForm.pay_per_session/100 || 0).toFixed(2) }} / 节</span>
+        </el-form-item>
+        <el-form-item label="每人头补贴">
+          <el-input-number v-model="editForm.pay_per_attendee" :step="500" :min="0" />
+          <span class="hint">分。¥{{ (editForm.pay_per_attendee/100 || 0).toFixed(2) }} / 人</span>
+        </el-form-item>
+        <el-form-item label="课程价提成">
+          <el-input-number v-model="editForm.commission_bps" :step="100" :min="0" :max="10000" />
+          <span class="hint">基点（100=1%）。当前 {{ (editForm.commission_bps/100 || 0).toFixed(2) }}%</span>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showEdit = false">取消</el-button>
+        <el-button type="primary" @click="saveEdit">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -224,4 +315,22 @@ onMounted(async () => { await loadUserMap(); await load() })
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.coach-card { cursor: pointer; }
+.salary-line {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--ys-line);
+  font-size: 12px;
+  color: var(--ys-accent-deep);
+  letter-spacing: 0.5px;
+}
+.salary-line span { margin-right: 4px; }
+.salary-empty {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--ys-line);
+  font-size: 11px;
+  color: var(--ys-text-light);
+}
+.hint { margin-left: 8px; font-size: 11px; color: var(--ys-text-muted); }
 </style>

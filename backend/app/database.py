@@ -56,6 +56,17 @@ def _migrate_existing() -> None:
         if "tags" not in existing:
             conn.exec_driver_sql("ALTER TABLE user ADD COLUMN tags VARCHAR(255)")
 
+        # coach: 薪酬配置（P3-① 教练课时工资）
+        existing = cols("coach")
+        for col, sql_type in [
+            ("base_salary", "INTEGER DEFAULT 0 NOT NULL"),
+            ("pay_per_session", "INTEGER DEFAULT 0 NOT NULL"),
+            ("commission_bps", "INTEGER DEFAULT 0 NOT NULL"),
+            ("pay_per_attendee", "INTEGER DEFAULT 0 NOT NULL"),
+        ]:
+            if col not in existing:
+                conn.exec_driver_sql(f"ALTER TABLE coach ADD COLUMN {col} {sql_type}")
+
         conn.commit()
 
 

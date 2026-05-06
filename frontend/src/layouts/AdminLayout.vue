@@ -36,6 +36,7 @@ const NAV = [
     { path: '/admin/check-in',    icon: 'check-circle-2',    label: '今日签到' },
     { path: '/admin/sessions',    icon: 'calendar-days',     label: '排课' },
     { path: '/admin/reports',     icon: 'trending-up',       label: '报表' },
+    { path: '/admin/payroll',     icon: 'banknote',          label: '工资条' },
   ]},
   { group: '管理', items: [
     { path: '/admin/members',     icon: 'users',             label: '会员' },

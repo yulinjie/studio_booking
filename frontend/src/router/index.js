@@ -18,6 +18,7 @@ const routes = [
       { path: 'cards', component: () => import('../pages/admin/Cards.vue') },
       { path: 'courses', component: () => import('../pages/admin/Courses.vue') },
       { path: 'coaches', component: () => import('../pages/admin/Coaches.vue') },
+      { path: 'payroll', component: () => import('../pages/admin/Payroll.vue') },
       { path: 'sessions', component: () => import('../pages/admin/Sessions.vue') },
       { path: 'check-in', component: () => import('../pages/admin/CheckIn.vue') },
       { path: 'coupons', component: () => import('../pages/admin/Coupons.vue') },

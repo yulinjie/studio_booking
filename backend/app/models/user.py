@@ -36,5 +36,12 @@ class Coach(SQLModel, table=True):
     title: Optional[str] = Field(default=None, max_length=64)  # 例如 "高级普拉提教练"
     bio: Optional[str] = Field(default=None, max_length=1000)
     specialties: Optional[str] = Field(default=None, max_length=200)  # 逗号分隔
+
+    # 薪酬配置（分为单位）
+    base_salary: int = Field(default=0)              # 月度底薪（分）
+    pay_per_session: int = Field(default=0)          # 每节课固定课时费（分）
+    commission_bps: int = Field(default=0)           # 提成基点（1bps=0.01%，1000=10%）
+    pay_per_attendee: int = Field(default=0)         # 每个签到人头额外补贴（分）
+
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)

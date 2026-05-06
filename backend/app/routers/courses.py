@@ -160,7 +160,22 @@ class CoachIn(BaseModel):
     title: Optional[str] = None
     bio: Optional[str] = None
     specialties: Optional[str] = None
+    base_salary: int = 0
+    pay_per_session: int = 0
+    commission_bps: int = 0
+    pay_per_attendee: int = 0
     is_active: bool = True
+
+
+class CoachUpdate(BaseModel):
+    title: Optional[str] = None
+    bio: Optional[str] = None
+    specialties: Optional[str] = None
+    base_salary: Optional[int] = None
+    pay_per_session: Optional[int] = None
+    commission_bps: Optional[int] = None
+    pay_per_attendee: Optional[int] = None
+    is_active: Optional[bool] = None
 
 
 @router.get("/coaches", response_model=List[Coach])
@@ -179,6 +194,19 @@ def create_coach(body: CoachIn, session: Session = Depends(get_session)):
     if session.exec(select(Coach).where(Coach.user_id == body.user_id)).first():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "该用户已经是教练")
     coach = Coach(**body.model_dump())
+    session.add(coach)
+    session.commit()
+    session.refresh(coach)
+    return coach
+
+
+@router.patch("/admin/coaches/{coach_id}", response_model=Coach, dependencies=[Depends(require_admin)])
+def update_coach(coach_id: int, body: CoachUpdate, session: Session = Depends(get_session)):
+    coach = session.get(Coach, coach_id)
+    if not coach:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "教练不存在")
+    for k, v in body.model_dump(exclude_unset=True).items():
+        setattr(coach, k, v)
     session.add(coach)
     session.commit()
     session.refresh(coach)
