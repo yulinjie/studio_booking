@@ -1,0 +1,19 @@
+# /etc/caddy/Caddyfile
+# 把 range.dns.navy 改成你的真实域名
+
+range.dns.navy {
+    encode gzip
+    reverse_proxy 127.0.0.1:8000
+
+    # 静态资源缓存（构建后的 JS/CSS 文件名带 hash，可以放心长缓存）
+    @assets path /assets/*
+    header @assets Cache-Control "public, max-age=31536000, immutable"
+
+    # 简单的访问日志
+    log {
+        output file /var/log/caddy/studio.log {
+            roll_size 50mb
+            roll_keep 5
+        }
+    }
+}

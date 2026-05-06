@@ -1,0 +1,258 @@
+/*
+  云舍 — 莫兰迪主题
+  色板灵感：莫兰迪静物画 — 雾灰、米白、鼠尾草绿、焦糖
+  整体追求"安静、克制、有呼吸感"
+*/
+
+:root {
+  /* === 品牌主色 === */
+  --ys-primary:        #88958D;   /* 鼠尾草灰绿（主色） */
+  --ys-primary-deep:   #6E7B73;
+  --ys-primary-light:  #B5C4B8;
+  --ys-primary-bg:     #DDE5DC;
+
+  /* === 中性色 === */
+  --ys-bg:        #F7F3EC;        /* 主背景：米白 */
+  --ys-bg-soft:   #EFEAE0;        /* 浅奶油 */
+  --ys-bg-card:   #FFFFFF;
+  --ys-line:      #E2DCCF;        /* 分隔线 */
+  --ys-border:    #D8D2C5;
+
+  /* === 文字 === */
+  --ys-text:        #3F3C3A;       /* 主文字 */
+  --ys-text-soft:   #6B6660;
+  --ys-text-muted:  #9E9890;
+  --ys-text-light:  #C5BFB6;
+
+  /* === 强调与状态（柔化版） === */
+  --ys-accent:      #C8A48C;       /* 焦糖（强调 / 高亮） */
+  --ys-accent-deep: #A4836B;
+  --ys-success:     #9DAD93;
+  --ys-warning:     #D9B98F;
+  --ys-danger:      #C8927E;
+  --ys-info:        #A8B0B5;
+
+  /* === 阴影 === */
+  --ys-shadow-sm:  0 1px 3px rgba(63, 60, 58, 0.04);
+  --ys-shadow:     0 4px 16px rgba(63, 60, 58, 0.06);
+  --ys-shadow-lg:  0 12px 32px rgba(63, 60, 58, 0.10);
+
+  /* === 圆角 === */
+  --ys-radius-sm: 6px;
+  --ys-radius:    10px;
+  --ys-radius-lg: 18px;
+}
+
+/* ===== 全局基底 ===== */
+html, body, #app {
+  background: var(--ys-bg);
+  color: var(--ys-text);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+               "Source Han Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.2px;
+}
+
+h1, h2, h3, h4 {
+  color: var(--ys-text);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* ===== Element Plus 主题覆盖 ===== */
+:root {
+  --el-color-primary: var(--ys-primary);
+  --el-color-primary-light-3: var(--ys-primary-light);
+  --el-color-primary-light-5: var(--ys-primary-bg);
+  --el-color-primary-light-7: var(--ys-bg-soft);
+  --el-color-primary-light-8: var(--ys-bg-soft);
+  --el-color-primary-light-9: var(--ys-bg);
+  --el-color-primary-dark-2: var(--ys-primary-deep);
+  --el-color-success: var(--ys-success);
+  --el-color-warning: var(--ys-warning);
+  --el-color-danger: var(--ys-danger);
+  --el-color-info: var(--ys-info);
+
+  --el-text-color-primary: var(--ys-text);
+  --el-text-color-regular: var(--ys-text-soft);
+  --el-text-color-secondary: var(--ys-text-muted);
+  --el-text-color-placeholder: var(--ys-text-light);
+
+  --el-border-color: var(--ys-border);
+  --el-border-color-light: var(--ys-line);
+  --el-border-color-lighter: var(--ys-line);
+
+  --el-fill-color-blank: var(--ys-bg-card);
+  --el-bg-color: var(--ys-bg-card);
+  --el-bg-color-page: var(--ys-bg);
+
+  --el-border-radius-base: var(--ys-radius-sm);
+}
+
+.el-card {
+  border-radius: var(--ys-radius) !important;
+  border: 1px solid var(--ys-line) !important;
+  box-shadow: var(--ys-shadow-sm) !important;
+}
+.el-card__header {
+  border-bottom: 1px solid var(--ys-line) !important;
+  background: linear-gradient(180deg, var(--ys-bg-card) 0%, var(--ys-bg-soft) 100%);
+}
+.el-button--primary {
+  background: var(--ys-primary) !important;
+  border-color: var(--ys-primary) !important;
+}
+.el-button--primary:hover {
+  background: var(--ys-primary-deep) !important;
+  border-color: var(--ys-primary-deep) !important;
+}
+.el-tag {
+  border-radius: 4px !important;
+  font-weight: 400 !important;
+}
+.el-table {
+  --el-table-border-color: var(--ys-line);
+  --el-table-header-bg-color: var(--ys-bg-soft);
+}
+.el-table th.el-table__cell {
+  background: var(--ys-bg-soft) !important;
+  color: var(--ys-text-soft) !important;
+  font-weight: 500;
+}
+.el-menu {
+  border-right: 0 !important;
+}
+.el-input__wrapper, .el-select__wrapper, .el-textarea__inner {
+  box-shadow: 0 0 0 1px var(--ys-border) inset !important;
+}
+.el-input__wrapper:hover, .el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--ys-primary) inset !important;
+}
+
+/* radio-button 选中态强制 sage */
+.el-radio-button__original-radio:checked + .el-radio-button__inner {
+  background: var(--ys-primary) !important;
+  border-color: var(--ys-primary) !important;
+  box-shadow: -1px 0 0 0 var(--ys-primary) !important;
+}
+.el-radio-button:first-child .el-radio-button__inner { border-left-color: var(--ys-border); }
+.el-radio-button__inner:hover { color: var(--ys-primary); }
+.el-radio-button__original-radio:checked + .el-radio-button__inner:hover { color: white; }
+
+/* checkbox / switch 也用 sage */
+.el-checkbox__input.is-checked .el-checkbox__inner {
+  background: var(--ys-primary) !important;
+  border-color: var(--ys-primary) !important;
+}
+.el-switch.is-checked .el-switch__core {
+  background: var(--ys-primary) !important;
+  border-color: var(--ys-primary) !important;
+}
+
+/* button link / text 主色 */
+.el-button.is-link.el-button--primary {
+  color: var(--ys-primary-deep) !important;
+  background: transparent !important;
+}
+.el-button.is-link.el-button--primary:hover {
+  color: var(--ys-primary) !important;
+  background: transparent !important;
+}
+.el-button.is-link:focus, .el-button.is-link:focus-visible,
+.el-button.is-link.is-active {
+  outline: none !important;
+  background: transparent !important;
+}
+
+/* alert / message 走柔和色 */
+.el-alert--error { background: #F7E5DD !important; color: #8C5640 !important; border: 1px solid #E8C8B6 !important; }
+.el-alert--success { background: #E5EDDF !important; color: #5C7050 !important; border: 1px solid #C8D5BB !important; }
+.el-alert--warning { background: #FAEEDE !important; color: #8C6940 !important; border: 1px solid #E8D4B6 !important; }
+.el-alert--info { background: #E8E9E5 !important; color: #6B6660 !important; border: 1px solid #D5D7D1 !important; }
+.el-alert .el-alert__title { font-weight: 400; }
+
+/* tag 主色调柔化 */
+.el-tag--primary { background: var(--ys-primary-bg) !important; border-color: var(--ys-primary-light) !important; color: var(--ys-primary-deep) !important; }
+.el-tag--success { background: #E5EDDF !important; border-color: #C8D5BB !important; color: #5C7050 !important; }
+.el-tag--warning { background: #FAEEDE !important; border-color: #E8D4B6 !important; color: #8C6940 !important; }
+.el-tag--danger  { background: #F7E5DD !important; border-color: #E8C8B6 !important; color: #8C5640 !important; }
+.el-tag--info    { background: #E8E9E5 !important; border-color: #D5D7D1 !important; color: #6B6660 !important; }
+
+/* ===== Vant 主题覆盖 ===== */
+:root {
+  --van-primary-color: var(--ys-primary);
+  --van-success-color: var(--ys-success);
+  --van-warning-color: var(--ys-warning);
+  --van-danger-color: var(--ys-danger);
+  --van-text-color: var(--ys-text);
+  --van-text-color-2: var(--ys-text-muted);
+  --van-background: var(--ys-bg);
+  --van-background-2: var(--ys-bg-card);
+  --van-border-color: var(--ys-line);
+  --van-cell-background: var(--ys-bg-card);
+  --van-cell-vertical-padding: 14px;
+  --van-tabbar-item-active-color: var(--ys-primary);
+  --van-button-border-radius: var(--ys-radius);
+  --van-card-radius: var(--ys-radius);
+}
+
+.van-cell-group--inset {
+  border-radius: var(--ys-radius) !important;
+  box-shadow: var(--ys-shadow-sm);
+}
+/* Vant tabs 下划线、active 文字色 */
+.van-tabs__line { background: var(--ys-primary) !important; }
+.van-tab--active { color: var(--ys-primary-deep) !important; }
+.van-tab__text--ellipsis { font-weight: 500; }
+/* Vant button primary */
+.van-button--primary {
+  background: var(--ys-primary) !important;
+  border-color: var(--ys-primary) !important;
+}
+.van-button--danger {
+  background: var(--ys-danger) !important;
+  border-color: var(--ys-danger) !important;
+}
+.van-button--danger.van-button--plain {
+  background: transparent !important;
+  color: var(--ys-danger) !important;
+}
+.van-button--primary.van-button--plain {
+  background: transparent !important;
+  color: var(--ys-primary-deep) !important;
+}
+/* Vant dialog 按钮 */
+.van-dialog__confirm { color: var(--ys-primary-deep) !important; }
+
+/* ===== 通用工具类 ===== */
+.ys-card {
+  background: var(--ys-bg-card);
+  border-radius: var(--ys-radius);
+  box-shadow: var(--ys-shadow-sm);
+  border: 1px solid var(--ys-line);
+}
+.ys-tag-soft {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  background: var(--ys-bg-soft);
+  color: var(--ys-text-soft);
+}
+.ys-divider-h {
+  height: 1px;
+  background: var(--ys-line);
+  margin: 12px 0;
+}
+
+/* 滚动条柔化 */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--ys-border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--ys-text-light); }

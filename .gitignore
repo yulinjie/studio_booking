@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+*.egg-info/
+
+# Node
+node_modules/
+.vite/
+dist/
+
+# 前端构建产物（每次部署重新构建）
+backend/static/
+
+# 运行时数据（不能进 git，否则会覆盖生产数据）
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+backend/uploads/
+backend/regression.db*
+backend/.env
+backend/backups/
+
+# 测试 / 临时
+*.log
+logs/
+.pytest_cache/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Claude / Trae
+.claude/

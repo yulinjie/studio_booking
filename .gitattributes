@@ -1,0 +1,17 @@
+* text=auto
+
+# Shell scripts MUST use LF on all platforms (run on Ubuntu)
+*.sh text eol=lf
+*.service text eol=lf
+Caddyfile text eol=lf
+
+# Windows-only batch files
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binaries
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.db binary

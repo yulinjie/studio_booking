@@ -1,0 +1,24 @@
+[Unit]
+Description=Studio Booking FastAPI
+After=network.target
+
+[Service]
+Type=simple
+User=studio
+Group=studio
+WorkingDirectory=/home/studio/studio_booking/backend
+Environment="PATH=/home/studio/studio_booking/backend/.venv/bin:/usr/bin"
+EnvironmentFile=/home/studio/studio_booking/backend/.env
+ExecStart=/home/studio/studio_booking/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+
+# 简单加固
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/home/studio/studio_booking/backend
+
+[Install]
+WantedBy=multi-user.target
