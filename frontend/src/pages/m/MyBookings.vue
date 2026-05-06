@@ -17,6 +17,10 @@ const loading = ref(false)
 const showEval = ref(false)
 const evalForm = ref({ booking_id: null, rating: 5, comment: '', is_anonymous: false, _course: '', _date: '' })
 
+const showPoster = ref(false)
+const posterUrl = ref('')
+const posterLoading = ref(false)
+
 async function load() {
   loading.value = true
   try {
@@ -53,6 +57,30 @@ async function cancel(b) {
     else showSuccessToast('已取消')
     await load()
   } catch (e) { showFailToast(e.message) }
+}
+
+async function openPoster(b) {
+  posterLoading.value = true
+  showPoster.value = true
+  posterUrl.value = ''
+  try {
+    const r = await fetch(`/api/share/poster/${b.id}.png`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    })
+    if (!r.ok) throw new Error('海报生成失败')
+    const blob = await r.blob()
+    posterUrl.value = URL.createObjectURL(blob)
+  } catch (e) {
+    showFailToast(e.message)
+    showPoster.value = false
+  } finally { posterLoading.value = false }
+}
+
+function downloadPoster() {
+  const a = document.createElement('a')
+  a.href = posterUrl.value
+  a.download = `云舍-打卡-${dayjs().format('YYYYMMDD')}.png`
+  a.click()
 }
 
 function openEval(b) {
@@ -140,7 +168,10 @@ const canEval = (b) => b.status === 'attended' && !evaluatedSet.value.has(b.id)
             <Icon name="map-pin" :size="11" />
             <span>{{ sessRoom(b.session_id) }}</span>
           </div>
-          <div class="b-actions" v-if="['booked','waitlist'].includes(b.status) || canEval(b) || (b.status === 'attended' && evaluatedSet.has(b.id))">
+          <div class="b-actions" v-if="['booked','waitlist'].includes(b.status) || b.status === 'attended'">
+            <van-button v-if="b.status === 'attended'" size="mini" plain type="primary" round @click="openPoster(b)">
+              <Icon name="image" :size="11" /> 打卡海报
+            </van-button>
             <span v-if="b.status === 'attended' && evaluatedSet.has(b.id)" class="evaluated-tag">
               <Icon name="check-circle-2" :size="11" /> 已评价
             </span>
@@ -152,6 +183,26 @@ const canEval = (b) => b.status === 'attended' && !evaluatedSet.value.has(b.id)
         </div>
       </div>
     </div>
+
+    <!-- 打卡海报 -->
+    <van-popup v-model:show="showPoster" position="bottom" round closeable :style="{ height: '90%' }">
+      <div class="poster-pop">
+        <h3>分享你的练习</h3>
+        <p class="poster-sub">长按图片可保存到相册 · 或点下方下载</p>
+
+        <div class="poster-frame">
+          <div v-if="posterLoading" class="poster-loading">
+            <div class="dot-pulse"></div>
+            <div>海报生成中...</div>
+          </div>
+          <img v-else-if="posterUrl" :src="posterUrl" class="poster-img" />
+        </div>
+
+        <van-button v-if="posterUrl" block round type="primary" @click="downloadPoster" style="margin-top: 14px">
+          <Icon name="download" :size="13" /> 下载到相册
+        </van-button>
+      </div>
+    </van-popup>
 
     <!-- 评价弹窗 -->
     <van-popup v-model:show="showEval" position="bottom" round closeable :style="{ height: '64%' }">
@@ -286,4 +337,40 @@ const canEval = (b) => b.status === 'attended' && !evaluatedSet.value.has(b.id)
   cursor: pointer;
 }
 .anon input { accent-color: var(--ys-primary); }
+
+.poster-pop { padding: 28px 22px 30px; height: 100%; display: flex; flex-direction: column; }
+.poster-pop h3 { margin: 0; font-size: 18px; font-weight: 500; letter-spacing: 1px; text-align: center; }
+.poster-sub { text-align: center; color: var(--ys-text-muted); font-size: 12px; margin: 6px 0 18px; letter-spacing: 1px; }
+.poster-frame {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ys-bg-soft);
+  border-radius: var(--ys-radius);
+  overflow: hidden;
+  min-height: 0;
+}
+.poster-img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 8px;
+  box-shadow: var(--ys-shadow-lg);
+  object-fit: contain;
+}
+.poster-loading {
+  text-align: center;
+  color: var(--ys-text-muted);
+  font-size: 13px;
+}
+.dot-pulse {
+  width: 40px; height: 40px; margin: 0 auto 14px;
+  border-radius: 50%;
+  background: var(--ys-primary-bg);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { transform: scale(0.85); opacity: 0.6; }
+  50% { transform: scale(1); opacity: 1; }
+}
 </style>

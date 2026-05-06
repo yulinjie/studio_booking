@@ -41,7 +41,8 @@ sudo apt-get install -y -q \
   python3 python3-venv python3-pip \
   git curl ca-certificates \
   sqlite3 ufw \
-  debian-keyring debian-archive-keyring apt-transport-https
+  debian-keyring debian-archive-keyring apt-transport-https \
+  fonts-noto-cjk fonts-noto-cjk-extra
 
 # ---------- 2. Node 20 ----------
 if ! command -v node > /dev/null || [[ "$(node -v)" != v2[0-9]* ]]; then
