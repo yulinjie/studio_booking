@@ -226,6 +226,95 @@ class AuditLogOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# ============ 流失预警 ============
+
+class AtRiskMember(BaseModel):
+    id: int
+    name: str
+    phone: str
+    last_attended_at: Optional[datetime] = None
+    days_inactive: int                         # 距今天数（无记录则 9999）
+    risk_level: str                            # warning | at_risk | lost
+    active_cards: int                          # 在用卡数
+    total_attended: int                        # 累计上课次数（参考强度）
+    tags: Optional[str] = None
+
+
+@router.get("/admin/at-risk-members", response_model=List[AtRiskMember], dependencies=[Depends(require_admin)])
+def list_at_risk(
+    level: Optional[str] = Query(None, regex="^(warning|at_risk|lost|all)?$"),
+    min_total: int = Query(1, ge=0, description="只看累计上过 ≥N 节的（过滤体验未购卡的人）"),
+    session: Session = Depends(get_session),
+):
+    """
+    根据'最近一次签到'判定风险等级：
+      warning   = 15-29 天未签到
+      at_risk   = 30-59 天未签到
+      lost      = 60+ 天未签到
+    只看 role=member + is_active=true 的人。
+    """
+    from ..models import Booking, BookingStatus, MemberCard, CardStatus
+    from sqlmodel import select as sel
+    members = session.exec(
+        sel(User).where(User.role == UserRole.member, User.is_active == True)
+    ).all()
+    now = datetime.utcnow()
+
+    results = []
+    for m in members:
+        # 最近一次 attended
+        last = session.exec(
+            sel(Booking)
+            .where(Booking.member_id == m.id, Booking.status == BookingStatus.attended)
+            .order_by(Booking.checked_in_at.desc())
+            .limit(1)
+        ).first()
+        if not last or not last.checked_in_at:
+            days = 9999
+            last_at = None
+        else:
+            days = (now - last.checked_in_at).days
+            last_at = last.checked_in_at
+
+        if days < 15:
+            continue        # 还活跃，不在预警列表
+
+        if days < 30:
+            risk = "warning"
+        elif days < 60:
+            risk = "at_risk"
+        else:
+            risk = "lost"
+
+        if level and level != "all" and level != risk:
+            continue
+
+        # 累计课次（过滤体验未购卡）
+        total = session.exec(
+            sel(Booking).where(Booking.member_id == m.id, Booking.status == BookingStatus.attended)
+        ).all()
+        if len(total) < min_total:
+            continue
+
+        # 在用卡数
+        cards = session.exec(
+            sel(MemberCard).where(MemberCard.member_id == m.id, MemberCard.status == CardStatus.active)
+        ).all()
+
+        results.append(AtRiskMember(
+            id=m.id, name=m.name, phone=m.phone,
+            last_attended_at=last_at, days_inactive=days,
+            risk_level=risk,
+            active_cards=len(cards),
+            total_attended=len(total),
+            tags=m.tags,
+        ))
+
+    # 按"距今天数 desc"排（流失越久越靠后？或越前？这里靠前 = 越久 = 更紧急）
+    results.sort(key=lambda r: r.days_inactive, reverse=True)
+    return results
+
+
 @router.get("/admin/audit-logs", response_model=List[AuditLogOut], dependencies=[Depends(require_admin)])
 def list_audit_logs(
     action: Optional[str] = None,
