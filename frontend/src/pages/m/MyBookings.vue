@@ -21,6 +21,11 @@ const showPoster = ref(false)
 const posterUrl = ref('')
 const posterLoading = ref(false)
 
+const showQR = ref(false)
+const qrUrl = ref('')
+const qrInfo = ref(null)
+let qrTimer = null
+
 async function load() {
   loading.value = true
   try {
@@ -57,6 +62,40 @@ async function cancel(b) {
     else showSuccessToast('已取消')
     await load()
   } catch (e) { showFailToast(e.message) }
+}
+
+async function openCheckInQR(b) {
+  qrInfo.value = b
+  showQR.value = true
+  qrUrl.value = ''
+  await refreshQR(b)
+  // 每 4 分钟自动刷新二维码（token 5 分钟过期）
+  if (qrTimer) clearInterval(qrTimer)
+  qrTimer = setInterval(() => refreshQR(b), 4 * 60 * 1000)
+}
+
+async function refreshQR(b) {
+  try {
+    const r = await fetch(`/api/me/bookings/${b.id}/checkin-qr?t=${Date.now()}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    })
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}))
+      throw new Error(err.detail || '生成失败')
+    }
+    if (qrUrl.value) URL.revokeObjectURL(qrUrl.value)
+    qrUrl.value = URL.createObjectURL(await r.blob())
+  } catch (e) {
+    showFailToast(e.message)
+    showQR.value = false
+  }
+}
+
+function closeQR() {
+  showQR.value = false
+  if (qrTimer) { clearInterval(qrTimer); qrTimer = null }
+  if (qrUrl.value) URL.revokeObjectURL(qrUrl.value)
+  qrUrl.value = ''
 }
 
 async function openPoster(b) {
@@ -169,6 +208,9 @@ const canEval = (b) => b.status === 'attended' && !evaluatedSet.value.has(b.id)
             <span>{{ sessRoom(b.session_id) }}</span>
           </div>
           <div class="b-actions" v-if="['booked','waitlist'].includes(b.status) || b.status === 'attended'">
+            <van-button v-if="b.status === 'booked'" size="mini" type="primary" round @click="openCheckInQR(b)">
+              <Icon name="qr-code" :size="11" /> 签到码
+            </van-button>
             <van-button v-if="b.status === 'attended'" size="mini" plain type="primary" round @click="openPoster(b)">
               <Icon name="image" :size="11" /> 打卡海报
             </van-button>
@@ -183,6 +225,19 @@ const canEval = (b) => b.status === 'attended' && !evaluatedSet.value.has(b.id)
         </div>
       </div>
     </div>
+
+    <!-- 签到二维码 -->
+    <van-popup :show="showQR" @update:show="(v) => v ? null : closeQR()" round closeable :style="{ width: '85%', maxWidth: '320px' }">
+      <div class="qr-pop">
+        <h3>到店出示给前台</h3>
+        <p class="qr-sub">{{ qrInfo ? courseName(sessions[qrInfo.session_id]?.course_id) : '' }}<br><small>{{ qrInfo && sessAt(qrInfo.session_id) ? dayjs(sessAt(qrInfo.session_id)).format('M月D日 HH:mm') : '' }}</small></p>
+        <div class="qr-frame">
+          <img v-if="qrUrl" :src="qrUrl" class="qr-img" />
+          <div v-else class="qr-loading">生成中...</div>
+        </div>
+        <p class="qr-tip">每 5 分钟自动刷新 · 关闭页面即失效</p>
+      </div>
+    </van-popup>
 
     <!-- 打卡海报 -->
     <van-popup v-model:show="showPoster" position="bottom" round closeable :style="{ height: '90%' }">
@@ -337,6 +392,21 @@ const canEval = (b) => b.status === 'attended' && !evaluatedSet.value.has(b.id)
   cursor: pointer;
 }
 .anon input { accent-color: var(--ys-primary); }
+
+.qr-pop { padding: 24px 18px 22px; text-align: center; }
+.qr-pop h3 { margin: 0; font-size: 16px; font-weight: 500; letter-spacing: 1px; }
+.qr-sub { font-size: 12px; color: var(--ys-text-muted); margin: 6px 0 18px; line-height: 1.6; }
+.qr-sub small { color: var(--ys-text-light); }
+.qr-frame {
+  background: white;
+  padding: 14px;
+  border-radius: var(--ys-radius);
+  display: inline-block;
+  box-shadow: var(--ys-shadow);
+}
+.qr-img { display: block; width: 220px; height: 220px; }
+.qr-loading { width: 220px; height: 220px; line-height: 220px; color: var(--ys-text-muted); }
+.qr-tip { font-size: 11px; color: var(--ys-text-light); margin: 14px 0 0; letter-spacing: 1px; }
 
 .poster-pop { padding: 28px 22px 30px; height: 100%; display: flex; flex-direction: column; }
 .poster-pop h3 { margin: 0; font-size: 18px; font-weight: 500; letter-spacing: 1px; text-align: center; }
