@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from .config import settings
 from .database import init_db
-from .routers import auth, members, cards, courses, bookings, admin, payroll, coupons, reports, evaluations, topup
+from .routers import auth, members, cards, courses, bookings, admin, payroll, growth, coupons, reports, evaluations, topup
 
 
 @asynccontextmanager
@@ -38,6 +38,7 @@ app.include_router(courses.router)
 app.include_router(bookings.router)
 app.include_router(admin.router)
 app.include_router(payroll.router)
+app.include_router(growth.router)
 app.include_router(coupons.router)
 app.include_router(reports.router)
 app.include_router(reports.practice_router)

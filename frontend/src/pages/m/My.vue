@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { showSuccessToast, showFailToast, showDialog } from 'vant'
 import api from '../../api/client'
 import { useAuth } from '../../stores/auth'
+import GrowthPanel from '../../components/GrowthPanel.vue'
 
 const router = useRouter()
 const auth = useAuth()
@@ -68,6 +69,11 @@ onMounted(load)
         <div class="phone">{{ me?.phone }}</div>
         <div v-if="me?.health_note" class="health-tag">⚕ 已记录健康备注</div>
       </div>
+    </div>
+
+    <div class="section" v-if="!editing">
+      <div class="section-title">成长</div>
+      <GrowthPanel />
     </div>
 
     <div class="section" v-if="!editing">
