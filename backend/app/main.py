@@ -64,12 +64,65 @@ app.mount("/uploads", StaticFiles(directory=_uploads_dir), name="uploads")
 # ===== 前端静态文件 =====
 # 前端 vite 构建到 backend/static/，由 FastAPI 直接提供。
 # 路由用 hash 模式，所以根路径返回 index.html 即可，不需要 SPA fallback。
+import gzip as _gzip
+from fastapi import Response as _Response
+
+
 class CachedStatic(StaticFiles):
-    """vite 出来的 /assets/* 文件名带内容 hash，可永久强缓存。"""
+    """vite 的 /assets/* 文件名带内容 hash，可永久强缓存。
+    同时按需 gzip 压缩（Starlette GZipMiddleware 对 mount 的 StaticFiles 不可靠）。
+    """
+    _gzip_cache = {}    # path -> bytes
+
     async def get_response(self, path, scope):
+        # 检查客户端是否接受 gzip
+        accept = ""
+        for k, v in scope.get("headers", []):
+            if k == b"accept-encoding":
+                accept = v.decode().lower()
+                break
+        wants_gzip = "gzip" in accept
+
+        # 仅对 .js / .css 这类文本资源压缩（lucide hash 文件 ≥1KB 的）
+        is_text = path.endswith((".js", ".css", ".html", ".json", ".svg", ".map", ".txt"))
+
+        if wants_gzip and is_text:
+            cache_key = (path, "gz")
+            if cache_key not in self._gzip_cache:
+                # 一次性读文件并压缩，缓存内存
+                full = self.directory / path
+                try:
+                    raw = full.read_bytes()
+                    if len(raw) >= 1024:
+                        self._gzip_cache[cache_key] = _gzip.compress(raw, compresslevel=6)
+                    else:
+                        self._gzip_cache[cache_key] = None
+                except Exception:
+                    self._gzip_cache[cache_key] = None
+            compressed = self._gzip_cache.get(cache_key)
+            if compressed:
+                # 推断 content-type
+                ext = path.rsplit(".", 1)[-1].lower()
+                ctype = {
+                    "js": "application/javascript", "css": "text/css", "html": "text/html",
+                    "json": "application/json", "svg": "image/svg+xml", "map": "application/json",
+                    "txt": "text/plain",
+                }.get(ext, "application/octet-stream")
+                return _Response(
+                    content=compressed,
+                    headers={
+                        "Content-Type": ctype + "; charset=utf-8" if ctype.startswith("text") or "javascript" in ctype or "json" in ctype else ctype,
+                        "Content-Encoding": "gzip",
+                        "Cache-Control": "public, max-age=31536000, immutable",
+                        "Vary": "Accept-Encoding",
+                    },
+                )
+
+        # 不压缩 / 不命中缓存的兜底
         resp = await super().get_response(path, scope)
         if resp.status_code == 200:
             resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            resp.headers["Vary"] = "Accept-Encoding"
         return resp
 
 
