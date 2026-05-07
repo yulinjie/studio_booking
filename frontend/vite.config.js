@@ -27,5 +27,21 @@ export default defineConfig({
   build: {
     outDir: '../backend/static',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        // 把第三方大库拆成单独 chunk —— 浏览器只在用到时下载，且强缓存命中率高
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('echarts')) return 'vendor-echarts'
+            if (id.includes('element-plus')) return 'vendor-element'
+            if (id.includes('vant')) return 'vendor-vant'
+            if (id.includes('lucide')) return 'vendor-lucide'
+            if (id.includes('vue') || id.includes('pinia')) return 'vendor-vue'
+            return 'vendor'
+          }
+        },
+      },
+    },
   },
 })

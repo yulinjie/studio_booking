@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from .config import settings
@@ -24,6 +25,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 响应压缩 — 对 ≥1KB 的响应自动 gzip。前端 JS/CSS 实测能压到 1/4 大小
+app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
 
 
 @app.get("/api/health")
@@ -60,18 +64,27 @@ app.mount("/uploads", StaticFiles(directory=_uploads_dir), name="uploads")
 # ===== 前端静态文件 =====
 # 前端 vite 构建到 backend/static/，由 FastAPI 直接提供。
 # 路由用 hash 模式，所以根路径返回 index.html 即可，不需要 SPA fallback。
+class CachedStatic(StaticFiles):
+    """vite 出来的 /assets/* 文件名带内容 hash，可永久强缓存。"""
+    async def get_response(self, path, scope):
+        resp = await super().get_response(path, scope)
+        if resp.status_code == 200:
+            resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return resp
+
+
 _static_dir = Path(__file__).resolve().parent.parent / "static"
 if _static_dir.exists():
-    app.mount("/assets", StaticFiles(directory=_static_dir / "assets"), name="assets")
+    app.mount("/assets", CachedStatic(directory=_static_dir / "assets"), name="assets")
 
     @app.get("/")
     def _index():
-        return FileResponse(_static_dir / "index.html")
+        return FileResponse(_static_dir / "index.html", headers={"Cache-Control": "no-cache"})
 
     @app.get("/{full_path:path}")
     def _spa(full_path: str):
         # /api/** 已经被前面的 router 拦截了；这里兜底所有其他路径
         target = _static_dir / full_path
         if target.is_file():
-            return FileResponse(target)
-        return FileResponse(_static_dir / "index.html")
+            return FileResponse(target, headers={"Cache-Control": "public, max-age=86400"})
+        return FileResponse(_static_dir / "index.html", headers={"Cache-Control": "no-cache"})
