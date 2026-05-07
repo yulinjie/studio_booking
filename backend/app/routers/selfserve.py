@@ -8,9 +8,11 @@
   4. 后台 POST /admin/orders/{id}/approve            → 自动开卡 + 标 paid
      或   POST /admin/orders/{id}/reject             → 标 cancelled + 写原因
 """
+import uuid
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 from ..database import get_session
@@ -23,6 +25,39 @@ from ..core.deps import get_current_user, require_admin, require_staff
 from ..services import audit as audit_svc, cards as card_svc
 
 router = APIRouter(prefix="/api", tags=["selfserve"])
+
+# ==================== 会员可用的图片上传（付款凭证 / 头像）====================
+UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
+ME_ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+ME_MAX_BYTES = 3 * 1024 * 1024     # 3MB（够清晰截图，又不会让人误传巨图卡死）
+
+
+class UploadResult(BaseModel):
+    url: str
+    filename: str
+    size: int
+
+
+@router.post("/me/upload", response_model=UploadResult)
+async def member_upload(
+    file: UploadFile = File(...),
+    current=Depends(get_current_user),
+):
+    """会员上传付款凭证 / 头像。3MB 限制，仅图片。"""
+    if file.content_type not in ME_ALLOWED_TYPES:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"仅支持 jpg/png/webp/gif")
+    content = await file.read()
+    if len(content) > ME_MAX_BYTES:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "文件过大（>3MB），请压缩后再传")
+    if len(content) < 100:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "文件无效或为空")
+    ext = "jpg"
+    if file.filename and "." in file.filename:
+        ext = file.filename.rsplit(".", 1)[-1].lower()[:8]
+    fname = f"{uuid.uuid4().hex}.{ext}"
+    (UPLOAD_DIR / fname).write_bytes(content)
+    return UploadResult(url=f"/uploads/{fname}", filename=fname, size=len(content))
 
 
 # ==================== 会员侧 ====================

@@ -56,9 +56,9 @@ app.include_router(staff.router)
 
 
 # ===== 用户上传文件目录 =====
+# 也走 CachedStatic，享受同样的 gzip + 强缓存（图片 hash 文件名 = uuid，不会变）
 _uploads_dir = Path(__file__).resolve().parent.parent / "uploads"
 _uploads_dir.mkdir(exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=_uploads_dir), name="uploads")
 
 
 # ===== 前端静态文件 =====
@@ -125,6 +125,8 @@ class CachedStatic(StaticFiles):
             resp.headers["Vary"] = "Accept-Encoding"
         return resp
 
+
+app.mount("/uploads", CachedStatic(directory=_uploads_dir), name="uploads")
 
 _static_dir = Path(__file__).resolve().parent.parent / "static"
 if _static_dir.exists():

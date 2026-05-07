@@ -34,23 +34,35 @@ async function cancel(o) {
 
 async function reuploadProof(o, file) {
   const f = file?.file || file
+  if (!f) return showFailToast('未选中文件')
+  if (f.size > 3 * 1024 * 1024) return showFailToast('图片过大，请压缩到 3MB 以内')
+
   const fd = new FormData()
   fd.append('file', f)
   showLoadingToast({ message: '上传中...', forbidClick: true, duration: 0 })
+
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 30000)
   try {
-    const r = await fetch('/api/admin/upload', {
+    const r = await fetch('/api/me/upload', {
       method: 'POST',
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       body: fd,
+      signal: ctrl.signal,
     })
-    const d = await r.json()
-    if (!r.ok) throw new Error(d.detail || '上传失败')
+    clearTimeout(timer)
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok) throw new Error(d.detail || `上传失败 (HTTP ${r.status})`)
     await api.patch(`/me/orders/${o.id}`, { payment_proof: d.url })
     closeToast()
     showSuccessToast('凭证已更新')
     reuploadOrderId.value = null
     await load()
-  } catch (e) { closeToast(); showFailToast(e.message) }
+  } catch (e) {
+    clearTimeout(timer)
+    closeToast()
+    showFailToast(e.name === 'AbortError' ? '上传超时，请检查网络重试' : e.message)
+  }
 }
 
 onMounted(load)

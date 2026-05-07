@@ -16,6 +16,7 @@ const stage = ref('browse')
 const selected = ref(null)
 const proofUrl = ref('')
 const orderId = ref(null)
+const uploadedFiles = ref([])     // 修：之前在底部 module-scope，多实例会串
 
 async function load() {
   try {
@@ -56,22 +57,35 @@ async function submitOrder() {
 async function handleProofUpload(file) {
   // file 是 vant uploader 给的 { file, status, message }
   const f = file?.file || file
+  if (!f) { showFailToast('未选中文件'); return }
+  if (f.size > 3 * 1024 * 1024) { showFailToast('图片过大，请压缩到 3MB 以内'); return }
+
   const fd = new FormData()
   fd.append('file', f)
   showLoadingToast({ message: '上传中...', forbidClick: true, duration: 0 })
+
+  // 30 秒超时（避免 toast 一直转圈）
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 30000)
   try {
-    const r = await fetch('/api/admin/upload', {
+    const r = await fetch('/api/me/upload', {
       method: 'POST',
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       body: fd,
+      signal: ctrl.signal,
     })
-    const data = await r.json()
-    if (!r.ok) throw new Error(data.detail || '上传失败')
+    clearTimeout(timer)
+    const data = await r.json().catch(() => ({}))
+    if (!r.ok) throw new Error(data.detail || `上传失败 (HTTP ${r.status})`)
     proofUrl.value = data.url
     closeToast()
+    showSuccessToast('截图已上传')
   } catch (e) {
+    clearTimeout(timer)
     closeToast()
-    showFailToast(e.message)
+    showFailToast(e.name === 'AbortError' ? '上传超时（30s），请检查网络后重试' : e.message)
+    // 失败时清空 uploader 让用户能再试
+    uploadedFiles.value = []
   }
 }
 
@@ -195,11 +209,6 @@ onMounted(load)
     </div>
   </div>
 </template>
-
-<script>
-import { ref } from 'vue'
-const uploadedFiles = ref([])
-</script>
 
 <style scoped>
 .page { padding-bottom: 24px; min-height: 100vh; }
