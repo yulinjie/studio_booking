@@ -15,15 +15,12 @@ const uploadHeaders = { Authorization: `Bearer ${localStorage.getItem('token')}`
 
 async function load() {
   coaches.value = await api.get('/coaches')
-  // 候选用户：role 为 coach 但还没建 Coach 资料 / 或所有非 member 用户
-  const m = await api.get('/admin/members', { params: { size: 200 } })
-  const existingUserIds = new Set(coaches.value.map(c => c.user_id))
-  candidates.value = m.items.filter(u => !existingUserIds.has(u.id) && u.role !== 'member')
 }
 
 function openCreate() {
   form.value = {
-    user_id: candidates.value[0]?.id, title: '', bio: '', specialties: '', is_active: true, avatar: '',
+    phone: '', name: '', password: '',
+    title: '', bio: '', specialties: '', is_active: true, avatar: '',
     base_salary: 0, pay_per_session: 0, commission_bps: 0, pay_per_attendee: 0,
   }
   showCreate.value = true
@@ -56,13 +53,18 @@ async function saveEdit() {
 async function save() {
   try {
     const body = { ...form.value }
-    delete body.avatar  // Coach 模型暂无 avatar 字段，先存 user.avatar
-    await api.post('/admin/coaches', body)
-    if (form.value.avatar) {
-      await api.patch(`/admin/members/${form.value.user_id}`, { avatar: form.value.avatar })
+    if (!body.phone) return ElMessage.warning('手机号必填')
+    if (!body.name) return ElMessage.warning('姓名必填')
+    delete body.avatar
+    if (!body.password) delete body.password
+    const created = await api.post('/admin/coaches', body)
+    // 上传的头像存在 user.avatar 上
+    if (form.value.avatar && created.user_id) {
+      await api.patch(`/admin/members/${created.user_id}`, { avatar: form.value.avatar }).catch(() => {})
     }
     ElMessage.success('教练已添加')
     showCreate.value = false
+    await loadUserMap()
     await load()
   } catch (e) { ElMessage.error(e.message) }
 }
@@ -130,14 +132,21 @@ onMounted(async () => { await loadUserMap(); await load() })
 
     <el-dialog v-model="showCreate" title="新增教练" width="500px">
       <el-form label-width="100px">
-        <el-form-item label="基础用户">
-          <el-select v-model="form.user_id" placeholder="从已有用户中选" filterable style="width: 100%">
-            <el-option v-for="u in candidates" :key="u.id" :label="`${u.name}（${u.phone}）`" :value="u.id" />
-          </el-select>
-          <div style="color: #9E9890; font-size: 11px; line-height: 1.4; margin-top: 4px">
-            没看到要的人？先在「会员」页用教练的手机号注册一个账号
-          </div>
+        <el-alert type="info" show-icon :closable="false" style="margin-bottom: 14px">
+          系统会自动建一个登录账号给教练。<br>
+          初始密码 = 手机号后 6 位（不填密码字段时），他/她登录后请去右上角"修改密码"。<br>
+          若该手机号已注册（如本来是会员），系统会自动把账号<b>提升为教练</b>。
+        </el-alert>
+        <el-form-item label="手机号" required>
+          <el-input v-model="form.phone" placeholder="作为登录账号" />
         </el-form-item>
+        <el-form-item label="姓名" required>
+          <el-input v-model="form.name" placeholder="教练姓名" />
+        </el-form-item>
+        <el-form-item label="初始密码">
+          <el-input v-model="form.password" placeholder="留空 = 手机号后 6 位" />
+        </el-form-item>
+        <el-divider>教练资料</el-divider>
         <el-form-item label="头衔">
           <el-input v-model="form.title" placeholder="例如：高级普拉提教练" />
         </el-form-item>

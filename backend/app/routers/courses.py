@@ -156,7 +156,15 @@ def update_course(cid: int, body: CourseUpdate, session: Session = Depends(get_s
 # ============ 教练（简版：先用 User+Coach） ============
 
 class CoachIn(BaseModel):
-    user_id: int
+    """新建教练 — 直接传手机号 + 姓名一步到位
+    若该手机号已注册：
+      - 若已是 coach 角色 → 报 400
+      - 若是其他角色（admin/staff/member）→ 提升为 coach 并保留原账号
+    若手机号没注册过 → 新建 User（role=coach）+ Coach 记录
+    """
+    phone: str = Field(min_length=4, max_length=20)
+    name: str = Field(min_length=1, max_length=64)
+    password: Optional[str] = None        # 不填 = 手机号后 6 位
     title: Optional[str] = None
     bio: Optional[str] = None
     specialties: Optional[str] = None
@@ -277,15 +285,42 @@ def get_coach_profile(
 
 @router.post("/admin/coaches", response_model=Coach, dependencies=[Depends(require_admin)])
 def create_coach(body: CoachIn, session: Session = Depends(get_session)):
-    user = session.get(User, body.user_id)
-    if not user:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "用户不存在")
-    if user.role != UserRole.coach:
-        user.role = UserRole.coach    # 自动提升为教练角色
+    from ..core.security import hash_password
+
+    existing = session.exec(select(User).where(User.phone == body.phone)).first()
+    if existing:
+        # 已经是教练
+        if existing.role == UserRole.coach:
+            existing_coach = session.exec(select(Coach).where(Coach.user_id == existing.id)).first()
+            if existing_coach:
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{body.phone} 已经是教练")
+            # 极少数情况：role=coach 但没 Coach 记录，下面给他补
+            user = existing
+        else:
+            # 其他角色 → 提升为教练
+            existing.role = UserRole.coach
+            existing.name = body.name        # 同步更新姓名
+            session.add(existing)
+            user = existing
+    else:
+        # 新建 User
+        pwd = body.password or (body.phone[-6:] if len(body.phone) >= 6 else body.phone)
+        user = User(
+            phone=body.phone,
+            name=body.name,
+            role=UserRole.coach,
+            password_hash=hash_password(pwd),
+        )
         session.add(user)
-    if session.exec(select(Coach).where(Coach.user_id == body.user_id)).first():
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "该用户已经是教练")
-    coach = Coach(**body.model_dump())
+        session.flush()
+
+    coach = Coach(
+        user_id=user.id,
+        title=body.title, bio=body.bio, specialties=body.specialties,
+        base_salary=body.base_salary, pay_per_session=body.pay_per_session,
+        commission_bps=body.commission_bps, pay_per_attendee=body.pay_per_attendee,
+        is_active=body.is_active,
+    )
     session.add(coach)
     session.commit()
     session.refresh(coach)
