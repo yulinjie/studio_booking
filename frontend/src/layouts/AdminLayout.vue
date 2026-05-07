@@ -89,7 +89,14 @@ const NAV = [
           <el-button size="small" link @click="logout">退出</el-button>
         </div>
       </el-header>
-      <el-main class="main"><router-view /></el-main>
+      <el-main class="main">
+        <!-- keep-alive：每个 URL 第一次访问后留在内存，切回来不重新拉 API/不重新渲染 -->
+        <router-view v-slot="{ Component, route }">
+          <keep-alive :max="20">
+            <component :is="Component" :key="route.fullPath" />
+          </keep-alive>
+        </router-view>
+      </el-main>
     </el-container>
   </el-container>
 

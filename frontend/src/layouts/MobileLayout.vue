@@ -20,7 +20,11 @@ function go(name) { router.push('/m/' + name) }
 
 <template>
   <div class="m-wrap">
-    <router-view />
+    <router-view v-slot="{ Component, route }">
+      <keep-alive :max="15">
+        <component :is="Component" :key="route.fullPath" />
+      </keep-alive>
+    </router-view>
     <nav class="tabbar">
       <div v-for="t in TABS" :key="t.name"
            class="tab" :class="{ active: active() === t.name }"
