@@ -23,6 +23,7 @@ const routes = [
       { path: 'birthday', component: () => import('../pages/admin/Birthday.vue') },
       { path: 'backups', component: () => import('../pages/admin/Backups.vue') },
       { path: 'pending-orders', component: () => import('../pages/admin/PendingOrders.vue') },
+      { path: 'staff', component: () => import('../pages/admin/Staff.vue') },
       { path: 'sessions', component: () => import('../pages/admin/Sessions.vue') },
       { path: 'check-in', component: () => import('../pages/admin/CheckIn.vue') },
       { path: 'coupons', component: () => import('../pages/admin/Coupons.vue') },

@@ -124,21 +124,19 @@ def change_my_password(
 @router.get("/admin/members", response_model=MemberPage, dependencies=[Depends(require_staff)])
 def list_members(
     q: Optional[str] = None,
-    role: Optional[UserRole] = None,
     is_active: Optional[bool] = None,
     tag: Optional[str] = None,           # 标签 LIKE 过滤
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=200),
     session: Session = Depends(get_session),
 ):
-    stmt = select(User)
-    cnt_stmt = select(func.count(User.id))
+    """只列会员（role=member）。员工/教练分别在 /admin/staff、/admin/coaches。"""
+    stmt = select(User).where(User.role == UserRole.member)
+    cnt_stmt = select(func.count(User.id)).where(User.role == UserRole.member)
     conds = []
     if q:
         like = f"%{q}%"
         conds.append(or_(User.phone.like(like), User.name.like(like)))
-    if role is not None:
-        conds.append(User.role == role)
     if is_active is not None:
         conds.append(User.is_active == is_active)
     if tag:
@@ -153,12 +151,23 @@ def list_members(
     return MemberPage(items=items, total=total, page=page, size=size)
 
 
-@router.post("/admin/members", response_model=MemberOut, dependencies=[Depends(require_admin)])
-def create_member(body: MemberCreate, session: Session = Depends(get_session)):
+@router.post("/admin/members", response_model=MemberOut)
+def create_member(
+    body: MemberCreate,
+    operator: User = Depends(require_staff),    # admin / staff 都可建会员
+    session: Session = Depends(get_session),
+):
+    """创建会员（角色强制为 member）。建员工请用 /admin/staff，建教练请用 /admin/coaches。"""
+    if body.role != UserRole.member:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "本接口只能创建会员。建员工请用 /admin/staff，建教练请用 /admin/coaches",
+        )
     if session.exec(select(User).where(User.phone == body.phone)).first():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "该手机号已存在")
     pwd = body.password or (body.phone[-6:] if len(body.phone) >= 6 else body.phone)
     data = body.model_dump(exclude={"password"})
+    data["role"] = UserRole.member          # 强制 member
     user = User(**data, password_hash=hash_password(pwd))
     session.add(user)
     session.commit()

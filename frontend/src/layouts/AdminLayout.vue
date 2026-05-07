@@ -49,6 +49,7 @@ const NAV = [
     { path: '/admin/coupons',     icon: 'ticket-percent',    label: '优惠券' },
   ]},
   { group: '系统', items: [
+    { path: '/admin/staff',       icon: 'shield',            label: '员工' },
     { path: '/admin/settings',    icon: 'settings',          label: '设置' },
     { path: '/admin/audit-logs',  icon: 'scroll-text',       label: '操作日志' },
     { path: '/admin/backups',     icon: 'database',          label: '数据备份' },

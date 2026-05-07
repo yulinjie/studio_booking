@@ -11,12 +11,11 @@ const total = ref(0)
 const page = ref(1)
 const size = ref(20)
 const q = ref('')
-const role = ref('member')
 const tagFilter = ref('')
 
 const showCreate = ref(false)
 const form = ref({
-  phone: '', name: '', role: 'member', password: '', gender: '', note: '',
+  phone: '', name: '', password: '', gender: '', note: '',
   emergency_contact_name: '', emergency_contact_phone: '', health_note: '',
   tags: [],
 })
@@ -38,7 +37,6 @@ const splitTags = (s) => (s ? String(s).split(/[,，、]\s*/).filter(Boolean) : 
 async function load() {
   const params = { page: page.value, size: size.value }
   if (q.value) params.q = q.value
-  if (role.value) params.role = role.value
   if (tagFilter.value) params.tag = tagFilter.value
   const data = await api.get('/admin/members', { params })
   items.value = data.items
@@ -55,7 +53,7 @@ async function create() {
     ElMessage.success('已创建')
     showCreate.value = false
     form.value = {
-      phone: '', name: '', role: 'member', password: '', gender: '', note: '',
+      phone: '', name: '', password: '', gender: '', note: '',
       emergency_contact_name: '', emergency_contact_phone: '', health_note: '',
       tags: [],
     }
@@ -104,16 +102,15 @@ onMounted(load)
 
 <template>
   <h2>会员管理</h2>
+  <p style="color: var(--ys-text-muted); font-size: 13px; margin: 4px 0 16px">
+    工作室会员（顾客）。员工 / 教练分别在
+    <router-link to="/admin/staff" style="color: var(--ys-primary-deep)">员工</router-link> /
+    <router-link to="/admin/coaches" style="color: var(--ys-primary-deep)">教练</router-link>
+    页管理。
+  </p>
   <el-card>
     <div class="filters">
       <el-input v-model="q" placeholder="搜手机号/姓名" style="width: 200px" @keyup.enter="load" clearable @clear="load" />
-      <el-select v-model="role" placeholder="角色" style="width: 120px" @change="load">
-        <el-option label="全部" value="" />
-        <el-option label="会员" value="member" />
-        <el-option label="教练" value="coach" />
-        <el-option label="前台" value="staff" />
-        <el-option label="店长" value="admin" />
-      </el-select>
       <el-select v-model="tagFilter" placeholder="标签筛选" clearable filterable allow-create style="width: 160px" @change="load" @clear="load">
         <el-option v-for="t in PRESET_TAGS" :key="t" :label="t" :value="t" />
       </el-select>
@@ -127,7 +124,6 @@ onMounted(load)
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="phone" label="手机号" width="130" />
       <el-table-column prop="name" label="姓名" width="100" />
-      <el-table-column prop="role" label="角色" width="80" />
       <el-table-column label="标签" min-width="180">
         <template #default="{ row }">
           <span v-if="splitTags(row.tags).length" class="tag-row">
@@ -165,13 +161,6 @@ onMounted(load)
     <el-form label-width="100px">
       <el-form-item label="手机号"><el-input v-model="form.phone" /></el-form-item>
       <el-form-item label="姓名"><el-input v-model="form.name" /></el-form-item>
-      <el-form-item label="角色">
-        <el-select v-model="form.role">
-          <el-option label="会员" value="member" />
-          <el-option label="教练" value="coach" />
-          <el-option label="前台" value="staff" />
-        </el-select>
-      </el-form-item>
       <el-form-item label="密码"><el-input v-model="form.password" placeholder="留空 = 手机号后6位" /></el-form-item>
       <el-form-item label="性别">
         <el-select v-model="form.gender" clearable>
