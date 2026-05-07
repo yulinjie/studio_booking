@@ -1,8 +1,11 @@
 <script setup>
+import { onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Icon from '../components/Icon.vue'
+import { prefetchMobile } from '../composables/prefetchRoutes.js'
 const router = useRouter()
 const route = useRoute()
+onMounted(() => prefetchMobile())
 
 const TABS = [
   { name: 'home',         icon: 'home',           label: '首页' },

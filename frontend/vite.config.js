@@ -27,10 +27,10 @@ export default defineConfig({
   build: {
     outDir: '../backend/static',
     emptyOutDir: true,
-    chunkSizeWarningLimit: 800,
+    chunkSizeWarningLimit: 1500,
+    cssCodeSplit: true,
     rollupOptions: {
       output: {
-        // 把第三方大库拆成单独 chunk —— 浏览器只在用到时下载，且强缓存命中率高
         manualChunks(id) {
           if (id.includes('node_modules')) {
             if (id.includes('echarts')) return 'vendor-echarts'
@@ -40,6 +40,9 @@ export default defineConfig({
             if (id.includes('vue') || id.includes('pinia')) return 'vendor-vue'
             return 'vendor'
           }
+          // 业务代码：按 layout 分组，少 chunk 数 = 少 HTTP 请求
+          if (id.includes('/pages/admin/')) return 'app-admin'
+          if (id.includes('/pages/m/')) return 'app-mobile'
         },
       },
     },

@@ -1,11 +1,14 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useAuth } from '../stores/auth'
 import { useRouter } from 'vue-router'
 import api from '../api/client'
 import StudioLogo from '../components/StudioLogo.vue'
 import Icon from '../components/Icon.vue'
+import { prefetchAdmin } from '../composables/prefetchRoutes.js'
+
+onMounted(() => prefetchAdmin())
 
 const auth = useAuth()
 const router = useRouter()
