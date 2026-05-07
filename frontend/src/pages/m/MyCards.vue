@@ -46,8 +46,14 @@ onMounted(load)
 <template>
   <div class="page">
     <header class="header">
-      <h2>我的卡包</h2>
-      <p class="sub">{{ cards.length }} 张卡 · {{ cards.filter(c=>c.status==='active').length }} 张可用</p>
+      <div class="head-row">
+        <div>
+          <h2>我的卡包</h2>
+          <p class="sub">{{ cards.length }} 张卡 · {{ cards.filter(c=>c.status==='active').length }} 张可用</p>
+        </div>
+        <van-button type="primary" round size="small" @click="$router.push('/m/buy-card')">+ 购卡</van-button>
+      </div>
+      <div class="orders-link" @click="$router.push('/m/my-orders')">📦 我的订单 ›</div>
     </header>
 
     <div v-if="!cards.length" class="empty">
@@ -117,9 +123,17 @@ onMounted(load)
 
 <style scoped>
 .page { padding: 0 0 16px; }
-.header { padding: 22px 20px 18px; }
+.header { padding: 22px 20px 14px; }
 .header h2 { margin: 0; font-size: 22px; font-weight: 500; letter-spacing: 1px; }
 .sub { color: var(--ys-text-muted); margin: 4px 0 0; font-size: 13px; }
+.head-row { display: flex; justify-content: space-between; align-items: flex-end; }
+.orders-link {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--ys-primary-deep);
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
 
 .cards { padding: 0 16px; display: flex; flex-direction: column; gap: 16px; }
 

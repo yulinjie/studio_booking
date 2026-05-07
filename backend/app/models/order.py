@@ -34,5 +34,8 @@ class PaymentOrder(SQLModel, table=True):
     created_card_id: Optional[int] = Field(default=None, foreign_key="membercard.id")
     refund_amount: int = Field(default=0)                     # 已退金额（分）
     refunded_at: Optional[datetime] = None
+    payment_proof: Optional[str] = Field(default=None, max_length=255)  # 会员上传的付款截图 URL
+    reject_reason: Optional[str] = Field(default=None, max_length=255)  # 驳回原因
+    source: str = Field(default="admin", max_length=16)       # admin（后台开卡）/ self（会员自助）
     note: Optional[str] = Field(default=None, max_length=255)
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)

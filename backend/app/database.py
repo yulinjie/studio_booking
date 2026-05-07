@@ -67,6 +67,22 @@ def _migrate_existing() -> None:
             if col not in existing:
                 conn.exec_driver_sql(f"ALTER TABLE coach ADD COLUMN {col} {sql_type}")
 
+        # paymentorder: 会员自助购卡相关
+        existing = cols("paymentorder")
+        for col, sql_type in [
+            ("payment_proof", "VARCHAR(255)"),
+            ("reject_reason", "VARCHAR(255)"),
+            ("source", "VARCHAR(16) DEFAULT 'admin' NOT NULL"),
+        ]:
+            if col not in existing:
+                conn.exec_driver_sql(f"ALTER TABLE paymentorder ADD COLUMN {col} {sql_type}")
+
+        # studioconfig: 收款码配置
+        existing = cols("studioconfig")
+        for col, sql_type in [("payment_qr", "VARCHAR(255)"), ("payment_note", "VARCHAR(500)")]:
+            if col not in existing:
+                conn.exec_driver_sql(f"ALTER TABLE studioconfig ADD COLUMN {col} {sql_type}")
+
         conn.commit()
 
 

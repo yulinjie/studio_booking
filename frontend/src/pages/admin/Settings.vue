@@ -31,6 +31,11 @@ function onLogoSuccess(resp) {
   ElMessage.success('已上传，记得点保存')
 }
 
+function onQrSuccess(resp) {
+  cfg.value.payment_qr = resp.url
+  ElMessage.success('收款码已上传，记得点保存')
+}
+
 function copyUrl() {
   navigator.clipboard?.writeText(regUrl.value).then(() => ElMessage.success('已复制'))
 }
@@ -71,6 +76,21 @@ onMounted(load)
           </el-form-item>
           <el-form-item label="预约规则">
             <el-input v-model="cfg.booking_rules" type="textarea" :rows="3" placeholder="给会员看的：取消时限、爽约规则" />
+          </el-form-item>
+
+          <el-divider>会员自助购卡 - 收款码</el-divider>
+          <el-alert type="info" show-icon :closable="false" style="margin-bottom: 14px">
+            会员在 H5"我的卡包→购卡"时会看到这个收款码 + 付款说明 + 上传截图。<br>
+            建议传 <b>微信/支付宝聚合收款码</b>（一张图能扫两个），或同时贴两张。
+          </el-alert>
+          <el-form-item label="收款二维码">
+            <el-upload :action="uploadAction" :headers="uploadHeaders" :show-file-list="false" :on-success="onQrSuccess" name="file" accept="image/*">
+              <el-button size="small">{{ cfg.payment_qr ? '更换' : '点击上传' }}</el-button>
+            </el-upload>
+            <img v-if="cfg.payment_qr" :src="cfg.payment_qr" style="max-height: 140px; margin-left: 12px; vertical-align: middle; border: 1px solid var(--ys-line); padding: 4px; border-radius: 4px" />
+          </el-form-item>
+          <el-form-item label="付款说明">
+            <el-input v-model="cfg.payment_note" type="textarea" :rows="2" placeholder="如：请在备注中写姓名+卡名，付款后上传截图" />
           </el-form-item>
         </el-form>
         <el-button type="primary" :loading="loading" @click="save" style="margin-left: 100px">保存</el-button>

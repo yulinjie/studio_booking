@@ -181,6 +181,8 @@ class StudioConfigUpdate(BaseModel):
     close_time: Optional[str] = None
     announcement: Optional[str] = None
     booking_rules: Optional[str] = None
+    payment_qr: Optional[str] = None
+    payment_note: Optional[str] = None
 
 
 @router.get("/studio/config", response_model=StudioConfig)
