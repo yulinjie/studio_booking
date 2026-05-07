@@ -4,12 +4,14 @@
 
 - **后端**：FastAPI + SQLModel + SQLite
 - **前端**：Vue 3 + Vite + Element Plus（后台）+ Vant（H5 会员端）
-- **部署**：Ubuntu + Caddy（自动 HTTPS）+ systemd
+- **部署**：Ubuntu + Tailscale Funnel（自动 HTTPS + 公网穿透）+ systemd
 - **CI/CD**：GitHub Actions Self-hosted Runner
 
 ## 在线访问
 
-https://range.dns.navy
+https://range-n89z.taild789ab.ts.net
+
+> 早期使用 `range.dns.navy` + Caddy 自管证书，但家宽 ISP 封 80/443 入站，ACME 验证走不通。改走 Tailscale Funnel 后由 Tailscale 的边缘节点中继公网流量，绕开端口封锁。
 
 ## 部署
 
