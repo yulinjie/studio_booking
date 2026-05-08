@@ -6,7 +6,9 @@ import api from '../../api/client'
 import dayjs from 'dayjs'
 import StudioLogo from '../../components/StudioLogo.vue'
 import EmptyState from '../../components/EmptyState.vue'
+import ListSkeleton from '../../components/ListSkeleton.vue'
 import Icon from '../../components/Icon.vue'
+// eslint-disable-next-line no-unused-vars
 import { colorFor, gradient } from '../../composables/categoryColors.js'
 
 const router = useRouter()
@@ -18,6 +20,8 @@ const categories = ref([])
 const myBookings = ref([])
 const studio = ref({ name: '云舍', announcement: '' })
 const loading = ref(false)
+const refreshing = ref(false)
+const firstLoaded = ref(false)
 
 const days = computed(() => Array.from({ length: 14 }, (_, i) => {
   const d = dayjs().add(i, 'day')
@@ -46,9 +50,14 @@ async function load() {
     categories.value = cat
     myBookings.value = mb
     if (!studio.value._loaded) {
-      try { studio.value = { ...await api.get('/studio/config'), _loaded: true } } catch {}
+      try { studio.value = { ...await api.get('/studio/config'), _loaded: true } } catch (e) { console.warn('[Schedule] studio config load failed:', e.message) }
     }
-  } finally { loading.value = false }
+  } finally { loading.value = false; firstLoaded.value = true }
+}
+
+async function onRefresh() {
+  refreshing.value = true
+  try { await load() } finally { refreshing.value = false }
 }
 
 watch(dayOffset, load)
@@ -120,25 +129,25 @@ function statusText(s) {
     <header class="header">
       <div class="brand">
         <StudioLogo size="sm" :show-tag="false" />
-        <span class="studio-name" v-if="studio.name && studio.name !== '云舍'">{{ studio.name }}</span>
+        <span v-if="studio.name && studio.name !== '云舍'" class="studio-name">{{ studio.name }}</span>
       </div>
       <div v-if="studio.announcement" class="announce">📣 {{ studio.announcement }}</div>
     </header>
 
     <div class="day-strip">
-      <div v-for="d in days" :key="d.offset"
-           @click="dayOffset = d.offset"
-           class="day-pill" :class="{ active: dayOffset === d.offset }">
+      <div
+v-for="d in days" :key="d.offset"
+           class="day-pill"
+           :class="{ active: dayOffset === d.offset }" @click="dayOffset = d.offset">
         <div class="wd">{{ d.wd }}</div>
         <div class="dt">{{ d.date }}</div>
       </div>
     </div>
 
+    <ListSkeleton v-if="!firstLoaded" :count="3" />
+    <van-pull-refresh v-else v-model="refreshing" @refresh="onRefresh">
     <div class="list">
-      <div v-if="loading && !sessions.length" class="empty">
-        <div class="loading-pulse"></div>
-      </div>
-      <EmptyState v-else-if="!sessions.length" illust="calendar" title="这天没有排课" sub="切换其他日期看看" />
+      <EmptyState v-if="!sessions.length" illust="calendar" title="这天没有排课" sub="切换其他日期看看" />
 
       <div v-for="s in sessions" :key="s.id" class="card" :class="{ past: isPast(s), full: isFull(s) && !myBooking(s.id) }">
         <div v-if="courseCover(s.course_id)" class="cover" :style="{ backgroundImage: `url(${courseCover(s.course_id)})` }">
@@ -178,14 +187,15 @@ function statusText(s) {
             <div v-if="statusText(s)" class="status-tag" :class="{ 'is-booked': !!myBooking(s.id), 'is-past': isPast(s) }">
               {{ statusText(s) }}
             </div>
-            <van-button v-if="myBooking(s.id) && !isPast(s)" size="small" plain type="danger" @click="cancel(s)" round>取消</van-button>
-            <van-button v-else-if="!isPast(s) && s.status === 'scheduled'" size="small" type="primary" @click="book(s)" round>
+            <van-button v-if="myBooking(s.id) && !isPast(s)" size="small" plain type="danger" round @click="cancel(s)">取消</van-button>
+            <van-button v-else-if="!isPast(s) && s.status === 'scheduled'" size="small" type="primary" round @click="book(s)">
               {{ isFull(s) ? '候补' : '预约' }}
             </van-button>
           </div>
         </div>
       </div>
     </div>
+    </van-pull-refresh>
   </div>
 </template>
 

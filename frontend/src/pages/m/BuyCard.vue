@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { showFailToast, showLoadingToast, closeToast, showSuccessToast } from 'vant'
 import api from '../../api/client'
 import Icon from '../../components/Icon.vue'
+import { safeSrc } from '../../composables/security.js'
 
 const router = useRouter()
 const templates = ref([])
@@ -138,7 +139,8 @@ onMounted(load)
         暂无卡种，请联系前台
       </div>
       <div v-else class="card-list">
-        <div v-for="t in templates" :key="t.id" class="card-item"
+        <div
+v-for="t in templates" :key="t.id" class="card-item"
              :style="{ background: `linear-gradient(135deg, ${TYPE_COLOR[t.type]?.from || '#88958D'} 0%, ${TYPE_COLOR[t.type]?.to || '#B5C4A7'} 100%)` }"
              @click="pickCard(t)">
           <div class="ci-top">
@@ -185,8 +187,8 @@ onMounted(load)
       </div>
 
       <div class="qr-block">
-        <div v-if="studio.payment_qr" class="qr-frame">
-          <img :src="studio.payment_qr" />
+        <div v-if="safeSrc(studio.payment_qr)" class="qr-frame">
+          <img :src="safeSrc(studio.payment_qr)" />
         </div>
         <div v-else class="qr-frame qr-empty">
           <Icon name="qr-code" :size="48" color="#C5BFB6" :stroke="1.5" />
@@ -198,7 +200,7 @@ onMounted(load)
       <div class="upload-block">
         <p class="ub-title">付款后请上传截图</p>
         <van-uploader v-model="uploadedFiles" :max-count="1" :after-read="handleProofUpload" />
-        <img v-if="proofUrl" :src="proofUrl" class="proof-preview" />
+        <img v-if="safeSrc(proofUrl)" :src="safeSrc(proofUrl)" class="proof-preview" />
       </div>
 
       <div class="bot-bar">

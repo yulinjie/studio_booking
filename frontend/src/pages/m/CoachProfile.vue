@@ -6,6 +6,7 @@ import api from '../../api/client'
 import dayjs from 'dayjs'
 import Icon from '../../components/Icon.vue'
 import EmptyState from '../../components/EmptyState.vue'
+import { safeSrc } from '../../composables/security.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -76,7 +77,7 @@ onMounted(load)
         </div>
         <div class="profile-block">
           <div class="avatar-wrap">
-            <img v-if="profile.avatar" :src="profile.avatar" class="avatar" />
+            <img v-if="safeSrc(profile.avatar)" :src="safeSrc(profile.avatar)" class="avatar" />
             <div v-else class="avatar-fallback">{{ initial }}</div>
           </div>
           <div class="name">{{ profile.name }}</div>

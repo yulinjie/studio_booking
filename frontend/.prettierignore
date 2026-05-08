@@ -1,0 +1,4 @@
+node_modules
+dist
+../backend/static
+package-lock.json

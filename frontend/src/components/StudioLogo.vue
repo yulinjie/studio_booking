@@ -10,7 +10,8 @@ defineProps({
   <div class="studio-logo" :class="[`size-${size}`, { inverse }]">
     <div class="mark">
       <svg viewBox="0 0 40 40" class="cloud-svg" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 24 Q4 24 4 20 Q4 16 8 16 Q8 11 14 11 Q19 11 21 14 Q24 12 28 14 Q34 14 34 20 Q38 20 38 24 Q38 28 34 28 L8 28 Q4 28 8 24 Z"
+        <path
+d="M8 24 Q4 24 4 20 Q4 16 8 16 Q8 11 14 11 Q19 11 21 14 Q24 12 28 14 Q34 14 34 20 Q38 20 38 24 Q38 28 34 28 L8 28 Q4 28 8 24 Z"
               stroke="currentColor" stroke-width="1.4" fill="none" opacity="0.9"/>
       </svg>
       <span class="chars">云舍</span>

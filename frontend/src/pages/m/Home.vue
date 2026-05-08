@@ -7,6 +7,7 @@ import Icon from '../../components/Icon.vue'
 import PracticeStats from '../../components/PracticeStats.vue'
 import { useAuth } from '../../stores/auth'
 import { gradient } from '../../composables/categoryColors.js'
+import { safeSrc } from '../../composables/security.js'
 
 const router = useRouter()
 const auth = useAuth()
@@ -17,6 +18,7 @@ const coaches = ref([])
 const categories = ref([])
 const myCoupons = ref([])
 const myCardsCount = ref(0)
+const refreshing = ref(false)
 
 const greeting = computed(() => {
   const h = new Date().getHours()
@@ -30,7 +32,7 @@ const greeting = computed(() => {
 async function load() {
   try {
     studio.value = await api.get('/studio/config')
-  } catch {}
+  } catch (e) { console.warn('[Home] studio config load failed:', e.message) }
   const start = dayjs().startOf('day').toISOString()
   const end = dayjs().endOf('day').toISOString()
   const [s, c, co, cat, cps, cards] = await Promise.all([
@@ -62,10 +64,16 @@ function goCourse(id) { router.push(`/m/course/${id}`) }
 function goCoupons() { router.push('/m/my-coupons') }
 function goCards() { router.push('/m/my-cards') }
 
+async function onRefresh() {
+  refreshing.value = true
+  try { await load() } finally { refreshing.value = false }
+}
+
 onMounted(load)
 </script>
 
 <template>
+  <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
   <div class="page">
     <!-- Hero -->
     <header class="hero">
@@ -77,7 +85,7 @@ onMounted(load)
           <div class="greet">{{ greeting }}，<b>{{ auth.user?.name }}</b></div>
           <div class="date">{{ dayjs().format('M 月 D 日 dddd') }}</div>
         </div>
-        <img v-if="studio.logo" :src="studio.logo" class="logo-img" />
+        <img v-if="safeSrc(studio.logo)" :src="safeSrc(studio.logo)" class="logo-img" />
         <div v-else class="cloud-mark">
           <svg viewBox="0 0 40 28" width="32" height="22"><path d="M8 22 Q3 22 3 17 Q3 12 8 12 Q8 6 14 6 Q19 6 21 9 Q24 7 28 9 Q35 9 35 16 Q39 16 39 21 Q39 26 33 26 L8 26 Q3 26 8 22 Z" stroke="rgba(255,255,255,0.7)" stroke-width="1.4" fill="none"/></svg>
         </div>
@@ -160,7 +168,7 @@ onMounted(load)
     </div>
 
     <!-- 推荐课程 -->
-    <div class="block" v-if="courses.length">
+    <div v-if="courses.length" class="block">
       <div class="block-head">
         <h3>课程推荐</h3>
       </div>
@@ -172,10 +180,10 @@ onMounted(load)
           </div>
           <div class="c-body">
             <div class="c-name">{{ c.name }}</div>
-            <div class="c-tags" v-if="c.tags">
+            <div v-if="c.tags" class="c-tags">
               <span v-for="t in c.tags.split(/[,，、]\s*/).slice(0, 2)" :key="t" class="c-tag">{{ t }}</span>
             </div>
-            <div class="c-stars" v-if="c.difficulty">
+            <div v-if="c.difficulty" class="c-stars">
               <span v-for="i in 5" :key="i" :class="['star', i <= c.difficulty ? 'on' : '']">★</span>
             </div>
           </div>
@@ -190,6 +198,7 @@ onMounted(load)
       <div class="p-foot">— 云舍</div>
     </div>
   </div>
+  </van-pull-refresh>
 </template>
 
 <style scoped>

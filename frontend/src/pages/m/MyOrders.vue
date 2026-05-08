@@ -6,14 +6,23 @@ import dayjs from 'dayjs'
 import api from '../../api/client'
 import Icon from '../../components/Icon.vue'
 import EmptyState from '../../components/EmptyState.vue'
+import ListSkeleton from '../../components/ListSkeleton.vue'
+import { safeSrc } from '../../composables/security.js'
 
 const router = useRouter()
 const orders = ref([])
 const loading = ref(true)
+const refreshing = ref(false)
+const firstLoaded = ref(false)
 const reuploadOrderId = ref(null)
 
 async function load() {
-  try { orders.value = await api.get('/me/orders') } finally { loading.value = false }
+  try { orders.value = await api.get('/me/orders') } finally { loading.value = false; firstLoaded.value = true }
+}
+
+async function onRefresh() {
+  refreshing.value = true
+  try { await load() } finally { refreshing.value = false }
 }
 
 const STATUS_STYLE = {
@@ -76,8 +85,10 @@ onMounted(load)
       <div class="back-spacer"></div>
     </header>
 
-    <div v-if="loading" class="loading-state">加载中...</div>
-    <EmptyState v-else-if="!orders.length" illust="bookmark" title="还没有订单" sub="去卡包页选张卡试试" />
+    <ListSkeleton v-if="!firstLoaded" :count="3" />
+
+    <van-pull-refresh v-else v-model="refreshing" @refresh="onRefresh">
+    <EmptyState v-if="!orders.length" illust="bookmark" title="还没有订单" sub="去卡包页选张卡试试" />
 
     <div v-else class="list">
       <div v-for="o in orders" :key="o.id" class="o-card">
@@ -98,9 +109,9 @@ onMounted(load)
             <span>{{ dayjs(o.created_at).format('M-D HH:mm') }}</span>
           </div>
 
-          <div v-if="o.payment_proof" class="proof-row">
+          <div v-if="safeSrc(o.payment_proof)" class="proof-row">
             <span class="proof-label">付款凭证</span>
-            <img :src="o.payment_proof" class="proof-thumb" @click="$event.target.classList.toggle('big')" />
+            <img :src="safeSrc(o.payment_proof)" class="proof-thumb" @click="$event.target.classList.toggle('big')" />
           </div>
 
           <div v-if="o.status === 'cancelled' && o.reject_reason" class="reject-line">
@@ -108,7 +119,8 @@ onMounted(load)
           </div>
 
           <div v-if="o.status === 'pending'" class="o-actions">
-            <van-uploader v-if="!o.payment_proof || reuploadOrderId === o.id"
+            <van-uploader
+v-if="!o.payment_proof || reuploadOrderId === o.id"
                           :max-count="1" :after-read="(f) => reuploadProof(o, f)">
               <van-button size="mini" type="primary" plain round>
                 <Icon name="image-plus" :size="11" /> {{ o.payment_proof ? '换张截图' : '上传截图' }}
@@ -122,6 +134,7 @@ onMounted(load)
         </div>
       </div>
     </div>
+    </van-pull-refresh>
   </div>
 </template>
 

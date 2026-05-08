@@ -140,7 +140,7 @@ onMounted(load)
         <el-button type="primary" @click="showCreate = true">+ 新增员工</el-button>
       </div>
 
-      <el-table :data="items" v-loading="loading" empty-text="还没有员工记录">
+      <el-table v-loading="loading" :data="items" empty-text="还没有员工记录">
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="phone" label="手机号" width="140" />
         <el-table-column label="姓名" width="140">
@@ -168,9 +168,9 @@ onMounted(load)
         <el-table-column prop="note" label="备注" min-width="120" />
         <el-table-column label="操作" width="280">
           <template #default="{ row }">
-            <el-button size="small" link type="primary" @click="openEdit(row)" :disabled="isMe(row)">编辑</el-button>
-            <el-button size="small" link type="primary" @click="resetPwd(row)" :disabled="isMe(row)">重置密码</el-button>
-            <el-button v-if="row.is_active" size="small" link type="danger" @click="deactivate(row)" :disabled="isMe(row)">停用</el-button>
+            <el-button size="small" link type="primary" :disabled="isMe(row)" @click="openEdit(row)">编辑</el-button>
+            <el-button size="small" link type="primary" :disabled="isMe(row)" @click="resetPwd(row)">重置密码</el-button>
+            <el-button v-if="row.is_active" size="small" link type="danger" :disabled="isMe(row)" @click="deactivate(row)">停用</el-button>
             <el-button v-else size="small" link type="success" @click="activate(row)">启用</el-button>
           </template>
         </el-table-column>
@@ -209,14 +209,15 @@ onMounted(load)
 
     <!-- 编辑 -->
     <el-dialog v-model="showEdit" title="编辑员工" width="450px">
-      <el-form label-width="100px" v-if="editing">
+      <el-form v-if="editing" label-width="100px">
         <el-form-item label="姓名"><el-input v-model="editForm.name" /></el-form-item>
         <el-form-item label="角色">
           <el-radio-group v-model="editForm.role">
             <el-radio value="staff">前台</el-radio>
             <el-radio value="admin">店长</el-radio>
           </el-radio-group>
-          <div v-if="editing.role === 'admin' && editForm.role !== 'admin'"
+          <div
+v-if="editing.role === 'admin' && editForm.role !== 'admin'"
                style="font-size: 11px; color: var(--ys-warning); margin-top: 4px">
             ⚠ 把店长降为前台后，他将失去工资条 / 设置 / 审计 / 员工管理 的权限
           </div>

@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../../api/client'
+import { safeSrc } from '../../composables/security.js'
 
 const cfg = ref({})
 const loading = ref(false)
@@ -63,7 +64,7 @@ onMounted(load)
             <el-upload :action="uploadAction" :headers="uploadHeaders" :show-file-list="false" :on-success="onLogoSuccess" name="file" accept="image/*">
               <el-button size="small">{{ cfg.logo ? '更换 Logo' : '点击上传' }}</el-button>
             </el-upload>
-            <img v-if="cfg.logo" :src="cfg.logo" style="max-height: 60px; margin-left: 12px; vertical-align: middle" />
+            <img v-if="safeSrc(cfg.logo)" :src="safeSrc(cfg.logo)" style="max-height: 60px; margin-left: 12px; vertical-align: middle" />
           </el-form-item>
           <el-form-item label="地址"><el-input v-model="cfg.address" /></el-form-item>
           <el-form-item label="联系电话"><el-input v-model="cfg.phone" /></el-form-item>
@@ -87,13 +88,13 @@ onMounted(load)
             <el-upload :action="uploadAction" :headers="uploadHeaders" :show-file-list="false" :on-success="onQrSuccess" name="file" accept="image/*">
               <el-button size="small">{{ cfg.payment_qr ? '更换' : '点击上传' }}</el-button>
             </el-upload>
-            <img v-if="cfg.payment_qr" :src="cfg.payment_qr" style="max-height: 140px; margin-left: 12px; vertical-align: middle; border: 1px solid var(--ys-line); padding: 4px; border-radius: 4px" />
+            <img v-if="safeSrc(cfg.payment_qr)" :src="safeSrc(cfg.payment_qr)" style="max-height: 140px; margin-left: 12px; vertical-align: middle; border: 1px solid var(--ys-line); padding: 4px; border-radius: 4px" />
           </el-form-item>
           <el-form-item label="付款说明">
             <el-input v-model="cfg.payment_note" type="textarea" :rows="2" placeholder="如：请在备注中写姓名+卡名，付款后上传截图" />
           </el-form-item>
         </el-form>
-        <el-button type="primary" :loading="loading" @click="save" style="margin-left: 100px">保存</el-button>
+        <el-button type="primary" :loading="loading" style="margin-left: 100px" @click="save">保存</el-button>
       </el-card>
     </el-col>
 
@@ -107,7 +108,7 @@ onMounted(load)
         <el-input v-model="regUrl" readonly>
           <template #append><el-button @click="copyUrl">复制</el-button></template>
         </el-input>
-        <el-button @click="downloadQr" type="primary" plain style="width: 100%; margin-top: 12px">下载二维码图片</el-button>
+        <el-button type="primary" plain style="width: 100%; margin-top: 12px" @click="downloadQr">下载二维码图片</el-button>
       </el-card>
     </el-col>
   </el-row>

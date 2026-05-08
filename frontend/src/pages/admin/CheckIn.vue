@@ -121,8 +121,8 @@ onMounted(async () => {
       v-model="scanInput"
       placeholder="扫码或粘贴..."
       size="large"
-      @keyup.enter="processScan"
       autofocus
+      @keyup.enter="processScan"
     />
     <div style="margin-top: 8px; font-size: 12px; color: #888">
       💡 连续扫码：签到成功后自动清空、聚焦，可继续扫下一位

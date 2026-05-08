@@ -4,7 +4,7 @@ import api from '../api/client'
 
 const stats = ref({ week: 0, month: 0, total: 0, days_since_last: null })
 onMounted(async () => {
-  try { stats.value = await api.get('/me/practice-stats') } catch {}
+  try { stats.value = await api.get('/me/practice-stats') } catch (e) { console.warn('[PracticeStats] load failed:', e.message) }
 })
 </script>
 

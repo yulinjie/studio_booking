@@ -71,12 +71,12 @@ onMounted(load)
       </div>
     </div>
 
-    <div class="section" v-if="!editing">
+    <div v-if="!editing" class="section">
       <div class="section-title">成长</div>
       <GrowthPanel />
     </div>
 
-    <div class="section" v-if="!editing">
+    <div v-if="!editing" class="section">
       <div class="section-title">资料</div>
       <div class="cell-group">
         <div class="cell" @click="editing = true">

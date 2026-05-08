@@ -57,7 +57,7 @@ async function submit() {
       <p class="welcome">{{ mode === 'login' ? '欢迎回来' : '加入云舍' }}</p>
       <p class="welcome-sub">{{ mode === 'login' ? '请用手机号登录账户' : '一起开始你的练习' }}</p>
 
-      <el-form @submit.prevent="submit" size="large" class="form">
+      <el-form size="large" class="form" @submit.prevent="submit">
         <el-form-item>
           <el-input v-model="phone" placeholder="手机号" autocomplete="tel">
             <template #prefix><span class="prefix-icon">📱</span></template>
@@ -74,7 +74,7 @@ async function submit() {
           </el-input>
         </el-form-item>
         <el-alert v-if="err" :title="err" type="error" :closable="false" show-icon class="err" />
-        <el-button type="primary" :loading="loading" @click="submit" class="submit-btn">
+        <el-button type="primary" :loading="loading" class="submit-btn" @click="submit">
           {{ mode === 'login' ? '登 录' : '注册并登录' }}
         </el-button>
       </el-form>

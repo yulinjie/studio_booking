@@ -3,13 +3,24 @@ import { ref, onMounted } from 'vue'
 import api from '../../api/client'
 import dayjs from 'dayjs'
 import EmptyState from '../../components/EmptyState.vue'
+import ListSkeleton from '../../components/ListSkeleton.vue'
 import Icon from '../../components/Icon.vue'
 
 const tab = ref('unused')
 const list = ref([])
+const refreshing = ref(false)
+const firstLoaded = ref(false)
+
 async function load() {
-  list.value = await api.get('/me/coupons', { params: { status: tab.value } })
+  try { list.value = await api.get('/me/coupons', { params: { status: tab.value } }) }
+  finally { firstLoaded.value = true }
 }
+
+async function onRefresh() {
+  refreshing.value = true
+  try { await load() } finally { refreshing.value = false }
+}
+
 onMounted(load)
 
 const TYPE_TXT = { discount: '满减券', percent: '折扣券', cash: '现金券', free_class: '体验课' }
@@ -29,13 +40,16 @@ function valueText(c) {
       <p class="sub">{{ list.length }} 张</p>
     </header>
 
-    <van-tabs v-model:active="tab" @change="load" line-width="32">
+    <van-tabs v-model:active="tab" line-width="32" @change="load">
       <van-tab title="可用" name="unused" />
       <van-tab title="已用" name="used" />
       <van-tab title="过期" name="expired" />
     </van-tabs>
 
-    <EmptyState v-if="!list.length" illust="bookmark"
+    <ListSkeleton v-if="!firstLoaded" :count="3" variant="row" />
+    <van-pull-refresh v-else v-model="refreshing" @refresh="onRefresh">
+    <EmptyState
+v-if="!list.length" illust="bookmark"
       :title="tab === 'unused' ? '还没领到优惠券' : '没有相关券'"
       sub="到店或参加活动可获得优惠券" />
 
@@ -43,20 +57,21 @@ function valueText(c) {
       <div v-for="c in list" :key="c.id" class="coupon" :class="`status-${c.status}`">
         <div class="left">
           <div class="value">{{ valueText(c) }}</div>
-          <div class="cond" v-if="c.min_amount > 0">满 ¥{{ (c.min_amount/100).toFixed(0) }}</div>
+          <div v-if="c.min_amount > 0" class="cond">满 ¥{{ (c.min_amount/100).toFixed(0) }}</div>
           <div class="type-tag">{{ TYPE_TXT[c.type] || c.type }}</div>
         </div>
         <div class="middle"></div>
         <div class="right">
           <div class="name">{{ c.name }}</div>
-          <div class="till" v-if="c.valid_until">
+          <div v-if="c.valid_until" class="till">
             <Icon name="clock" :size="11" />
             <span>{{ dayjs(c.valid_until).format('YYYY-MM-DD') }} 前</span>
           </div>
-          <div class="status-stamp" v-if="c.status !== 'unused'">{{ c.status === 'used' ? '已使用' : '已过期' }}</div>
+          <div v-if="c.status !== 'unused'" class="status-stamp">{{ c.status === 'used' ? '已使用' : '已过期' }}</div>
         </div>
       </div>
     </div>
+    </van-pull-refresh>
   </div>
 </template>
 

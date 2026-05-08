@@ -75,7 +75,8 @@ onMounted(load)
 
     <!-- 风险分布卡 -->
     <div class="risk-cards">
-      <div v-for="(meta, key) in RISK_STYLE" :key="key" class="risk-card"
+      <div
+v-for="(meta, key) in RISK_STYLE" :key="key" class="risk-card"
            :class="{ active: level === key }"
            :style="{ background: meta.bg, color: meta.color }"
            @click="level = (level === key ? 'all' : key); load()">
@@ -105,8 +106,9 @@ onMounted(load)
         </el-button>
       </div>
 
-      <el-table :data="items" v-loading="loading" :row-key="getRowKey"
-                @selection-change="handleSelectionChange" empty-text="所有会员状态正常 ✨">
+      <el-table
+v-loading="loading" :data="items" :row-key="getRowKey"
+                empty-text="所有会员状态正常 ✨" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="48" />
         <el-table-column prop="name" label="姓名" width="100" />
         <el-table-column prop="phone" label="手机号" width="130" />

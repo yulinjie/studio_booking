@@ -26,7 +26,8 @@ function go(name) { router.push('/m/' + name) }
       </keep-alive>
     </router-view>
     <nav class="tabbar">
-      <div v-for="t in TABS" :key="t.name"
+      <div
+v-for="t in TABS" :key="t.name"
            class="tab" :class="{ active: active() === t.name }"
            @click="go(t.name)">
         <Icon :name="t.icon" :size="20" :stroke="active() === t.name ? 2 : 1.5" />

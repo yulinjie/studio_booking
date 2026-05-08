@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import api from '../../api/client'
+import { safeSrc } from '../../composables/security.js'
 
 const orders = ref([])
 const members = ref({})
@@ -64,7 +65,7 @@ onMounted(load)
         <h2>购卡订单审核</h2>
         <div class="sub">{{ orders.length }} 笔待审核</div>
       </div>
-      <el-button @click="load" :loading="loading">刷新</el-button>
+      <el-button :loading="loading" @click="load">刷新</el-button>
     </div>
 
     <el-card v-loading="loading">
@@ -90,15 +91,15 @@ onMounted(load)
 
           <div class="o-proof">
             <div class="proof-label">付款凭证</div>
-            <div v-if="o.payment_proof" class="proof-img" @click="previewUrl = o.payment_proof">
-              <img :src="o.payment_proof" />
+            <div v-if="safeSrc(o.payment_proof)" class="proof-img" @click="previewUrl = o.payment_proof">
+              <img :src="safeSrc(o.payment_proof)" />
               <div class="proof-hint">点击放大</div>
             </div>
             <div v-else class="proof-empty">⚠ 会员还没上传截图</div>
           </div>
 
           <div class="o-actions">
-            <el-button type="success" @click="approve(o)" :disabled="!o.payment_proof">
+            <el-button type="success" :disabled="!o.payment_proof" @click="approve(o)">
               ✓ 通过 → 开卡
             </el-button>
             <el-button type="danger" plain @click="reject(o)">✗ 驳回</el-button>
@@ -109,7 +110,7 @@ onMounted(load)
 
     <!-- 截图预览 -->
     <el-dialog v-model="previewUrl" :title="false" width="80%" :show-close="true" align-center>
-      <img v-if="previewUrl" :src="previewUrl" style="width: 100%; display: block" />
+      <img v-if="safeSrc(previewUrl)" :src="safeSrc(previewUrl)" style="width: 100%; display: block" />
     </el-dialog>
 
     <el-alert type="info" show-icon :closable="false" style="margin-top: 16px">

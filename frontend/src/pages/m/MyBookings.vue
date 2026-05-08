@@ -5,7 +5,9 @@ import api from '../../api/client'
 import dayjs from 'dayjs'
 import StarRating from '../../components/StarRating.vue'
 import EmptyState from '../../components/EmptyState.vue'
+import ListSkeleton from '../../components/ListSkeleton.vue'
 import Icon from '../../components/Icon.vue'
+import { safeSrc } from '../../composables/security.js'
 
 const tab = ref('upcoming')
 const bookings = ref([])
@@ -13,6 +15,8 @@ const sessions = ref({})
 const courses = ref([])
 const evaluatedSet = ref(new Set())
 const loading = ref(false)
+const refreshing = ref(false) // 下拉刷新态
+const firstLoaded = ref(false) // 是否已完成首次加载
 
 const showEval = ref(false)
 const evalForm = ref({ booking_id: null, rating: 5, comment: '', is_anonymous: false, _course: '', _date: '' })
@@ -44,8 +48,13 @@ async function load() {
       const pendingIds = new Set(pending.map(b => b.id))
       const attendedIds = bookings.value.filter(b => b.status === 'attended').map(b => b.id)
       evaluatedSet.value = new Set(attendedIds.filter(id => !pendingIds.has(id)))
-    } catch {}
-  } finally { loading.value = false }
+    } catch (e) { console.warn('[MyBookings] evaluations load failed:', e.message) }
+  } finally { loading.value = false; firstLoaded.value = true }
+}
+
+async function onRefresh() {
+  refreshing.value = true
+  try { await load() } finally { refreshing.value = false }
 }
 
 onMounted(load)
@@ -178,12 +187,16 @@ const canEval = (b) => b.status === 'attended' && !evaluatedSet.value.has(b.id)
       <p class="sub">{{ tab === 'upcoming' ? '即将开始的课程' : '所有预约记录' }}</p>
     </header>
 
-    <van-tabs v-model:active="tab" @change="load" line-width="32" line-height="2" sticky offset-top="0">
+    <van-tabs v-model:active="tab" line-width="32" line-height="2" sticky offset-top="0" @change="load">
       <van-tab title="即将开始" name="upcoming"></van-tab>
       <van-tab title="历史记录" name="all"></van-tab>
     </van-tabs>
 
-    <EmptyState v-if="!bookings.length && !loading" illust="bookmark"
+    <ListSkeleton v-if="!firstLoaded" :count="3" />
+
+    <van-pull-refresh v-else v-model="refreshing" @refresh="onRefresh">
+    <EmptyState
+v-if="!bookings.length" illust="bookmark"
       :title="tab === 'upcoming' ? '没有待上的课' : '没有预约记录'"
       :sub="tab === 'upcoming' ? '去课表预约第一节课吧' : ''" />
 
@@ -203,11 +216,11 @@ const canEval = (b) => b.status === 'attended' && !evaluatedSet.value.has(b.id)
             <Icon name="clock" :size="11" />
             <span v-if="sessAt(b.session_id)">{{ dayjs(sessAt(b.session_id)).format('M月D日 ddd HH:mm') }}</span>
           </div>
-          <div class="b-meta" v-if="sessRoom(b.session_id)">
+          <div v-if="sessRoom(b.session_id)" class="b-meta">
             <Icon name="map-pin" :size="11" />
             <span>{{ sessRoom(b.session_id) }}</span>
           </div>
-          <div class="b-actions" v-if="['booked','waitlist'].includes(b.status) || b.status === 'attended'">
+          <div v-if="['booked','waitlist'].includes(b.status) || b.status === 'attended'" class="b-actions">
             <van-button v-if="b.status === 'booked'" size="mini" type="primary" round @click="openCheckInQR(b)">
               <Icon name="qr-code" :size="11" /> 签到码
             </van-button>
@@ -225,14 +238,15 @@ const canEval = (b) => b.status === 'attended' && !evaluatedSet.value.has(b.id)
         </div>
       </div>
     </div>
+    </van-pull-refresh>
 
     <!-- 签到二维码 -->
-    <van-popup :show="showQR" @update:show="(v) => v ? null : closeQR()" round closeable :style="{ width: '85%', maxWidth: '320px' }">
+    <van-popup :show="showQR" round closeable :style="{ width: '85%', maxWidth: '320px' }" @update:show="(v) => v ? null : closeQR()">
       <div class="qr-pop">
         <h3>到店出示给前台</h3>
         <p class="qr-sub">{{ qrInfo ? courseName(sessions[qrInfo.session_id]?.course_id) : '' }}<br><small>{{ qrInfo && sessAt(qrInfo.session_id) ? dayjs(sessAt(qrInfo.session_id)).format('M月D日 HH:mm') : '' }}</small></p>
         <div class="qr-frame">
-          <img v-if="qrUrl" :src="qrUrl" class="qr-img" />
+          <img v-if="safeSrc(qrUrl)" :src="safeSrc(qrUrl)" class="qr-img" />
           <div v-else class="qr-loading">生成中...</div>
         </div>
         <p class="qr-tip">每 5 分钟自动刷新 · 关闭页面即失效</p>
@@ -250,10 +264,10 @@ const canEval = (b) => b.status === 'attended' && !evaluatedSet.value.has(b.id)
             <div class="dot-pulse"></div>
             <div>海报生成中...</div>
           </div>
-          <img v-else-if="posterUrl" :src="posterUrl" class="poster-img" />
+          <img v-else-if="safeSrc(posterUrl)" :src="safeSrc(posterUrl)" class="poster-img" />
         </div>
 
-        <van-button v-if="posterUrl" block round type="primary" @click="downloadPoster" style="margin-top: 14px">
+        <van-button v-if="posterUrl" block round type="primary" style="margin-top: 14px" @click="downloadPoster">
           <Icon name="download" :size="13" /> 下载到相册
         </van-button>
       </div>
@@ -285,7 +299,7 @@ const canEval = (b) => b.status === 'attended' && !evaluatedSet.value.has(b.id)
         </div>
 
         <label class="anon">
-          <input type="checkbox" v-model="evalForm.is_anonymous" />
+          <input v-model="evalForm.is_anonymous" type="checkbox" />
           <span>匿名提交（教练看不到我的姓名）</span>
         </label>
 

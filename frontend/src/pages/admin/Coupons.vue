@@ -158,7 +158,7 @@ onMounted(load)
             {{ form.type === 'discount' || form.type === 'cash' ? '单位：分' : (form.type === 'percent' ? '0-100' : '次数') }}
           </span>
         </el-form-item>
-        <el-form-item label="使用门槛(分)" v-if="['discount','cash'].includes(form.type)">
+        <el-form-item v-if="['discount','cash'].includes(form.type)" label="使用门槛(分)">
           <el-input-number v-model="form.min_amount" :step="100" :min="0" />
         </el-form-item>
         <el-form-item label="有效期(天)"><el-input-number v-model="form.valid_days" :min="1" :max="3650" /></el-form-item>

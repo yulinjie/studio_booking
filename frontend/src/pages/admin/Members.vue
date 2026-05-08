@@ -110,7 +110,7 @@ onMounted(load)
   </p>
   <el-card>
     <div class="filters">
-      <el-input v-model="q" placeholder="搜手机号/姓名" style="width: 200px" @keyup.enter="load" clearable @clear="load" />
+      <el-input v-model="q" placeholder="搜手机号/姓名" style="width: 200px" clearable @keyup.enter="load" @clear="load" />
       <el-select v-model="tagFilter" placeholder="标签筛选" clearable filterable allow-create style="width: 160px" @change="load" @clear="load">
         <el-option v-for="t in PRESET_TAGS" :key="t" :label="t" :value="t" />
       </el-select>
@@ -120,14 +120,15 @@ onMounted(load)
       <el-button type="primary" @click="showCreate = true">+ 新增会员</el-button>
     </div>
 
-    <el-table :data="items" @row-click="(row) => router.push(`/admin/members/${row.id}`)" style="cursor: pointer">
+    <el-table :data="items" style="cursor: pointer" @row-click="(row) => router.push(`/admin/members/${row.id}`)">
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="phone" label="手机号" width="130" />
       <el-table-column prop="name" label="姓名" width="100" />
       <el-table-column label="标签" min-width="180">
         <template #default="{ row }">
           <span v-if="splitTags(row.tags).length" class="tag-row">
-            <span v-for="t in splitTags(row.tags)" :key="t" class="ms-tag"
+            <span
+v-for="t in splitTags(row.tags)" :key="t" class="ms-tag"
                   :style="{ background: tagStyle(t).bg, color: tagStyle(t).color }">{{ t }}</span>
           </span>
           <el-button v-else size="small" link type="primary" @click.stop="quickEditTags(row)">+ 加标签</el-button>
@@ -152,9 +153,9 @@ onMounted(load)
     </el-table>
 
     <el-pagination
-      style="margin-top: 12px; justify-content: flex-end; display: flex"
-      :total="total" v-model:current-page="page" v-model:page-size="size"
-      @current-change="load" layout="total, prev, pager, next" />
+      v-model:current-page="page"
+      v-model:page-size="size" style="margin-top: 12px; justify-content: flex-end; display: flex" :total="total"
+      layout="total, prev, pager, next" @current-change="load" />
   </el-card>
 
   <el-dialog v-model="showCreate" title="新增会员" width="500px">

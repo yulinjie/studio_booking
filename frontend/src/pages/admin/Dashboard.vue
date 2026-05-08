@@ -59,7 +59,7 @@ async function load() {
     monthRevenue.value = orders
       .filter(o => o.paid_at && dayjs(o.paid_at).isAfter(since30))
       .reduce((s, o) => s + (o.paid_amount || 0), 0)
-  } catch {}
+  } catch (e) { console.warn('[Dashboard] revenue load failed:', e.message) }
 
   // 新增会员（近 30 天）
   newMemberCount.value = (m.items || []).filter(u => dayjs(u.created_at).isAfter(dayjs().subtract(30, 'day'))).length
@@ -70,7 +70,7 @@ async function load() {
     todayAttended.value = allBookings.filter(b =>
       b.checked_in_at && dayjs(b.checked_in_at).format('YYYY-MM-DD') === dayjs().format('YYYY-MM-DD')
     ).length
-  } catch {}
+  } catch (e) { console.warn('[Dashboard] bookings load failed:', e.message) }
 
   await nextTick()
   drawTrend(Object.keys(dayBuckets), Object.values(dayBuckets))

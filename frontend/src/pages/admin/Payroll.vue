@@ -117,7 +117,7 @@ onMounted(load)
                       <span>提成 {{ (c.rates.commission_bps / 100).toFixed(2) }}%</span>
                     </div>
 
-                    <table class="detail-table" v-if="detailMap[c.coach_id]?.length">
+                    <table v-if="detailMap[c.coach_id]?.length" class="detail-table">
                       <thead>
                         <tr>
                           <th>时间</th>

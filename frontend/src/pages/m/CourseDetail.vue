@@ -31,7 +31,7 @@ async function load() {
   })
   upcoming.value = sessions
   coaches.value = await api.get('/coaches')
-  try { evaluations.value = await api.get('/admin/evaluations', { params: { course_id: courseId } }) } catch {}
+  try { evaluations.value = await api.get('/admin/evaluations', { params: { course_id: courseId } }) } catch (e) { console.warn('[CourseDetail] evaluations load failed:', e.message) }
 }
 
 const coachName = (id) => coaches.value.find(c => c.id === id)?.title || ''
@@ -61,7 +61,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="page" v-if="course">
+  <div v-if="course" class="page">
     <!-- Cover -->
     <div class="cover" :style="course.cover ? { backgroundImage: `url(${course.cover})` } : {}">
       <div v-if="!course.cover" class="cover-default">
@@ -71,7 +71,7 @@ onMounted(load)
       <div class="back" @click="router.back()">
         <Icon name="chevron-left" :size="22" color="white" />
       </div>
-      <div class="cat-tag" v-if="category">{{ category.name }}</div>
+      <div v-if="category" class="cat-tag">{{ category.name }}</div>
     </div>
 
     <!-- Header -->
@@ -92,13 +92,13 @@ onMounted(load)
         <div class="m-item"><Icon name="users" :size="14" /> 容量 {{ course.capacity }}</div>
         <div class="m-item"><Icon name="circle-dollar-sign" :size="14" /> {{ course.credit_cost }} 次/节</div>
       </div>
-      <div class="tags" v-if="course.tags">
+      <div v-if="course.tags" class="tags">
         <span v-for="t in course.tags.split(/[,，、]\s*/)" :key="t" class="tag">{{ t }}</span>
       </div>
     </div>
 
     <!-- 介绍 -->
-    <div class="section" v-if="course.description || course.suitable_for">
+    <div v-if="course.description || course.suitable_for" class="section">
       <div class="s-title">课程介绍</div>
       <p v-if="course.description" class="desc">{{ course.description }}</p>
       <div v-if="course.suitable_for" class="suit">
@@ -120,12 +120,13 @@ onMounted(load)
           </div>
           <div class="sess-info">
             <div class="sess-coach">{{ coachName(s.coach_id) || '— 教练 —' }}</div>
-            <div class="sess-room" v-if="s.room"><Icon name="map-pin" :size="11" /> {{ s.room }}</div>
+            <div v-if="s.room" class="sess-room"><Icon name="map-pin" :size="11" /> {{ s.room }}</div>
             <div class="sess-cap" :class="{ full: s.booked_count >= s.capacity }">
               {{ s.booked_count }}/{{ s.capacity }} 位
             </div>
           </div>
-          <van-button size="small" type="primary" round
+          <van-button
+size="small" type="primary" round
                       :disabled="s.status !== 'scheduled' || dayjs(s.start_at).isBefore(dayjs())"
                       @click="book(s)">
             {{ s.booked_count >= s.capacity ? '候补' : '预约' }}
@@ -135,7 +136,7 @@ onMounted(load)
     </div>
 
     <!-- 评价 -->
-    <div class="section" v-if="evaluations.length">
+    <div v-if="evaluations.length" class="section">
       <div class="s-title">学员评价 ({{ evaluations.length }})</div>
       <div v-for="ev in evaluations.slice(0, 5)" :key="ev.id" class="ev">
         <div class="ev-stars">

@@ -52,7 +52,7 @@ onMounted(load)
           <span v-else style="color: var(--ys-warning)">⚠ 还没有备份记录</span>
         </div>
       </div>
-      <el-button @click="load" :loading="loading">刷新</el-button>
+      <el-button :loading="loading" @click="load">刷新</el-button>
     </div>
 
     <div class="kpi-row">

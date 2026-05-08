@@ -12,7 +12,8 @@ function set(n) { if (!props.readonly) emit('update:value', n) }
 
 <template>
   <div class="star-row" :style="{ '--size': size + 'px', '--c': color }">
-    <span v-for="i in max" :key="i"
+    <span
+v-for="i in max" :key="i"
           class="star"
           :class="{ on: i <= value, click: !readonly }"
           @click="set(i)">★</span>

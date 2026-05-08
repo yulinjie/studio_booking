@@ -58,7 +58,8 @@ onMounted(load)
 
     <!-- 徽章墙 -->
     <div class="badge-wall">
-      <div v-for="b in stats.badges" :key="b.key"
+      <div
+v-for="b in stats.badges" :key="b.key"
            class="badge" :class="{ unlocked: b.unlocked }"
            :title="b.description">
         <div class="b-emoji">{{ b.emoji }}</div>

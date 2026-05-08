@@ -82,7 +82,8 @@ const monthName = computed(() => dayjs().format('M 月'))
       </template>
       <div class="run-row">
         <el-select v-model="selectedTemplate" placeholder="选生日券模板" style="width: 320px">
-          <el-option v-for="t in couponTemplates" :key="t.id"
+          <el-option
+v-for="t in couponTemplates" :key="t.id"
                      :label="`${t.name} ${t.value}元（${t.type}）`" :value="t.id" />
         </el-select>
         <el-button type="primary" :disabled="!stats.pending" @click="runBatch">
@@ -100,9 +101,9 @@ const monthName = computed(() => dayjs().format('M 月'))
         <b>{{ monthName }}寿星名单</b>
       </template>
 
-      <el-table :data="members" v-loading="loading" empty-text="本月暂无寿星 🎂">
+      <el-table v-loading="loading" :data="members" empty-text="本月暂无寿星 🎂">
         <el-table-column label="" width="50">
-          <template #default="{ row }">
+          <template #default>
             <span class="cake">🎂</span>
           </template>
         </el-table-column>

@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../../api/client'
+import { safeSrc } from '../../composables/security.js'
 
 const cats = ref([])
 const courses = ref([])
@@ -170,7 +171,7 @@ onMounted(load)
         <el-upload action="/api/admin/upload" :headers="uploadHeaders" :show-file-list="false" :on-success="onCoverSuccess" name="file" accept="image/*">
           <el-button size="small">{{ courseForm.cover ? '更换封面' : '点击上传' }}</el-button>
         </el-upload>
-        <img v-if="courseForm.cover" :src="courseForm.cover" style="height: 60px; margin-left: 12px; vertical-align: middle; border-radius: 4px" />
+        <img v-if="safeSrc(courseForm.cover)" :src="safeSrc(courseForm.cover)" style="height: 60px; margin-left: 12px; vertical-align: middle; border-radius: 4px" />
       </el-form-item>
       <el-form-item label="时长(分)"><el-input-number v-model="courseForm.duration_minutes" :min="15" /></el-form-item>
       <el-form-item label="容量"><el-input-number v-model="courseForm.capacity" :min="1" /></el-form-item>

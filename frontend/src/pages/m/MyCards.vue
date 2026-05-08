@@ -2,13 +2,24 @@
 import { ref, onMounted } from 'vue'
 import api from '../../api/client'
 import dayjs from 'dayjs'
+import ListSkeleton from '../../components/ListSkeleton.vue'
 
 const cards = ref([])
 const txByCard = ref({})
 const expanded = ref({})
+const refreshing = ref(false)
+const firstLoaded = ref(false)
 
 async function load() {
-  cards.value = await api.get('/me/cards')
+  try { cards.value = await api.get('/me/cards') } finally { firstLoaded.value = true }
+}
+
+async function onRefresh() {
+  refreshing.value = true
+  try {
+    txByCard.value = {} // 刷新时清掉本地展开的流水缓存
+    await load()
+  } finally { refreshing.value = false }
 }
 
 async function toggle(card) {
@@ -56,20 +67,24 @@ onMounted(load)
       <div class="orders-link" @click="$router.push('/m/my-orders')">📦 我的订单 ›</div>
     </header>
 
+    <ListSkeleton v-if="!firstLoaded" :count="3" />
+
+    <van-pull-refresh v-else v-model="refreshing" @refresh="onRefresh">
     <div v-if="!cards.length" class="empty">
       <div class="empty-icon">◇</div>
       <div class="empty-text">还没有卡</div>
       <div class="empty-sub">到工作室前台购卡</div>
     </div>
 
-    <div class="cards" v-else>
+    <div v-else class="cards">
       <div v-for="c in cards" :key="c.id" class="card-wrap">
-        <div class="card-face" :class="`status-${c.status}`"
+        <div
+class="card-face" :class="`status-${c.status}`"
              :style="{ background: `linear-gradient(135deg, ${TYPE_GRAD[c.type]?.from} 0%, ${TYPE_GRAD[c.type]?.to} 100%)` }"
              @click="toggle(c)">
           <div class="face-top">
             <div class="card-type">{{ TYPE_GRAD[c.type]?.label || c.type }}</div>
-            <div class="card-status" v-if="c.status !== 'active'">{{ STATUS_TEXT[c.status] }}</div>
+            <div v-if="c.status !== 'active'" class="card-status">{{ STATUS_TEXT[c.status] }}</div>
           </div>
           <div class="card-name">{{ c.name }}</div>
           <div class="card-amount">
@@ -118,6 +133,7 @@ onMounted(load)
         </div>
       </div>
     </div>
+    </van-pull-refresh>
   </div>
 </template>
 

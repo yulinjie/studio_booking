@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../../api/client'
+import { safeSrc } from '../../composables/security.js'
 
 const coaches = ref([])
 const candidates = ref([])
@@ -107,9 +108,9 @@ onMounted(async () => { await loadUserMap(); await load() })
     <div v-else class="grid">
       <div v-for="c in coaches" :key="c.id" class="coach-card" @click="openEdit(c)">
         <div class="avatar-block">
-          <img v-if="userAvatar(c.user_id)" :src="userAvatar(c.user_id)" class="avatar-img" />
+          <img v-if="safeSrc(userAvatar(c.user_id))" :src="safeSrc(userAvatar(c.user_id))" class="avatar-img" />
           <div v-else class="avatar-fallback">{{ userName(c.user_id)[0] }}</div>
-          <div class="online-dot" v-if="c.is_active"></div>
+          <div v-if="c.is_active" class="online-dot"></div>
         </div>
         <div class="info-block">
           <div class="name">{{ userName(c.user_id) }}</div>
@@ -119,7 +120,7 @@ onMounted(async () => { await loadUserMap(); await load() })
             <span v-for="t in c.specialties.split(/[,，、]\s*/)" :key="t" class="tag">{{ t }}</span>
           </div>
           <div v-if="c.bio" class="bio">{{ c.bio }}</div>
-          <div class="salary-line" v-if="c.base_salary || c.pay_per_session || c.commission_bps">
+          <div v-if="c.base_salary || c.pay_per_session || c.commission_bps" class="salary-line">
             💰
             <span v-if="c.base_salary">底 ¥{{ (c.base_salary/100).toFixed(0) }}</span>
             <span v-if="c.pay_per_session">· 课时 ¥{{ (c.pay_per_session/100).toFixed(0) }}</span>
@@ -154,7 +155,7 @@ onMounted(async () => { await loadUserMap(); await load() })
           <el-upload action="/api/admin/upload" :headers="uploadHeaders" :show-file-list="false" :on-success="onAvatarSuccess" name="file" accept="image/*">
             <el-button size="small">{{ form.avatar ? '更换头像' : '点击上传' }}</el-button>
           </el-upload>
-          <img v-if="form.avatar" :src="form.avatar" style="height: 60px; margin-left: 12px; vertical-align: middle; border-radius: 50%" />
+          <img v-if="safeSrc(form.avatar)" :src="safeSrc(form.avatar)" style="height: 60px; margin-left: 12px; vertical-align: middle; border-radius: 50%" />
         </el-form-item>
         <el-form-item label="擅长">
           <el-input v-model="form.specialties" placeholder="多个用逗号分隔，如：器械普拉提, 阿斯汤加, 阴瑜伽" />
@@ -188,7 +189,7 @@ onMounted(async () => { await loadUserMap(); await load() })
     </el-dialog>
 
     <el-dialog v-model="showEdit" :title="`编辑教练 ${userName(editing?.user_id)}`" width="500px">
-      <el-form label-width="100px" v-if="editing">
+      <el-form v-if="editing" label-width="100px">
         <el-form-item label="头衔"><el-input v-model="editForm.title" /></el-form-item>
         <el-form-item label="擅长"><el-input v-model="editForm.specialties" placeholder="多个用逗号分隔" /></el-form-item>
         <el-form-item label="简介"><el-input v-model="editForm.bio" type="textarea" :rows="3" /></el-form-item>

@@ -1,9 +1,11 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { useAuth } from '../stores/auth'
 
+const SITE = '云舍约课'
+
 const routes = [
   { path: '/', redirect: '/m/home' },
-  { path: '/login', component: () => import('../pages/Login.vue') },
+  { path: '/login', component: () => import('../pages/Login.vue'), meta: { title: '登录' } },
 
   {
     path: '/admin',
@@ -11,24 +13,24 @@ const routes = [
     meta: { requireStaff: true },
     children: [
       { path: '', redirect: '/admin/dashboard' },
-      { path: 'dashboard', component: () => import('../pages/admin/Dashboard.vue') },
-      { path: 'reports', component: () => import('../pages/admin/Reports.vue') },
-      { path: 'members', component: () => import('../pages/admin/Members.vue') },
-      { path: 'members/:id', component: () => import('../pages/admin/MemberDetail.vue'), props: true },
-      { path: 'cards', component: () => import('../pages/admin/Cards.vue') },
-      { path: 'courses', component: () => import('../pages/admin/Courses.vue') },
-      { path: 'coaches', component: () => import('../pages/admin/Coaches.vue') },
-      { path: 'payroll', component: () => import('../pages/admin/Payroll.vue') },
-      { path: 'at-risk', component: () => import('../pages/admin/AtRisk.vue') },
-      { path: 'birthday', component: () => import('../pages/admin/Birthday.vue') },
-      { path: 'backups', component: () => import('../pages/admin/Backups.vue') },
-      { path: 'pending-orders', component: () => import('../pages/admin/PendingOrders.vue') },
-      { path: 'staff', component: () => import('../pages/admin/Staff.vue') },
-      { path: 'sessions', component: () => import('../pages/admin/Sessions.vue') },
-      { path: 'check-in', component: () => import('../pages/admin/CheckIn.vue') },
-      { path: 'coupons', component: () => import('../pages/admin/Coupons.vue') },
-      { path: 'settings', component: () => import('../pages/admin/Settings.vue') },
-      { path: 'audit-logs', component: () => import('../pages/admin/AuditLogs.vue') },
+      { path: 'dashboard', component: () => import('../pages/admin/Dashboard.vue'), meta: { title: '仪表盘' } },
+      { path: 'reports', component: () => import('../pages/admin/Reports.vue'), meta: { title: '报表中心' } },
+      { path: 'members', component: () => import('../pages/admin/Members.vue'), meta: { title: '会员管理' } },
+      { path: 'members/:id', component: () => import('../pages/admin/MemberDetail.vue'), props: true, meta: { title: '会员详情' } },
+      { path: 'cards', component: () => import('../pages/admin/Cards.vue'), meta: { title: '卡种' } },
+      { path: 'courses', component: () => import('../pages/admin/Courses.vue'), meta: { title: '课程' } },
+      { path: 'coaches', component: () => import('../pages/admin/Coaches.vue'), meta: { title: '教练' } },
+      { path: 'payroll', component: () => import('../pages/admin/Payroll.vue'), meta: { title: '薪酬结算' } },
+      { path: 'at-risk', component: () => import('../pages/admin/AtRisk.vue'), meta: { title: '流失预警' } },
+      { path: 'birthday', component: () => import('../pages/admin/Birthday.vue'), meta: { title: '生日礼遇' } },
+      { path: 'backups', component: () => import('../pages/admin/Backups.vue'), meta: { title: '备份' } },
+      { path: 'pending-orders', component: () => import('../pages/admin/PendingOrders.vue'), meta: { title: '待审订单' } },
+      { path: 'staff', component: () => import('../pages/admin/Staff.vue'), meta: { title: '员工' } },
+      { path: 'sessions', component: () => import('../pages/admin/Sessions.vue'), meta: { title: '排课' } },
+      { path: 'check-in', component: () => import('../pages/admin/CheckIn.vue'), meta: { title: '今日签到' } },
+      { path: 'coupons', component: () => import('../pages/admin/Coupons.vue'), meta: { title: '优惠券' } },
+      { path: 'settings', component: () => import('../pages/admin/Settings.vue'), meta: { title: '设置' } },
+      { path: 'audit-logs', component: () => import('../pages/admin/AuditLogs.vue'), meta: { title: '操作日志' } },
     ],
   },
 
@@ -38,18 +40,21 @@ const routes = [
     meta: { requireAuth: true },
     children: [
       { path: '', redirect: '/m/home' },
-      { path: 'home', component: () => import('../pages/m/Home.vue') },
-      { path: 'schedule', component: () => import('../pages/m/Schedule.vue') },
-      { path: 'course/:id', component: () => import('../pages/m/CourseDetail.vue'), props: true },
-      { path: 'coach/:id', component: () => import('../pages/m/CoachProfile.vue'), props: true },
-      { path: 'buy-card', component: () => import('../pages/m/BuyCard.vue') },
-      { path: 'my-orders', component: () => import('../pages/m/MyOrders.vue') },
-      { path: 'my-bookings', component: () => import('../pages/m/MyBookings.vue') },
-      { path: 'my-cards', component: () => import('../pages/m/MyCards.vue') },
-      { path: 'my-coupons', component: () => import('../pages/m/MyCoupons.vue') },
-      { path: 'my', component: () => import('../pages/m/My.vue') },
+      { path: 'home', component: () => import('../pages/m/Home.vue'), meta: { title: '首页' } },
+      { path: 'schedule', component: () => import('../pages/m/Schedule.vue'), meta: { title: '课表' } },
+      { path: 'course/:id', component: () => import('../pages/m/CourseDetail.vue'), props: true, meta: { title: '课程详情' } },
+      { path: 'coach/:id', component: () => import('../pages/m/CoachProfile.vue'), props: true, meta: { title: '教练' } },
+      { path: 'buy-card', component: () => import('../pages/m/BuyCard.vue'), meta: { title: '购卡' } },
+      { path: 'my-orders', component: () => import('../pages/m/MyOrders.vue'), meta: { title: '我的订单' } },
+      { path: 'my-bookings', component: () => import('../pages/m/MyBookings.vue'), meta: { title: '我的预约' } },
+      { path: 'my-cards', component: () => import('../pages/m/MyCards.vue'), meta: { title: '我的卡包' } },
+      { path: 'my-coupons', component: () => import('../pages/m/MyCoupons.vue'), meta: { title: '我的优惠券' } },
+      { path: 'my', component: () => import('../pages/m/My.vue'), meta: { title: '个人中心' } },
     ],
   },
+
+  // 兜底 404 → 首页
+  { path: '/:pathMatch(.*)*', redirect: '/m/home' },
 ]
 
 const router = createRouter({ history: createWebHashHistory(), routes })
@@ -61,6 +66,11 @@ router.beforeEach((to) => {
     if (auth.isLoggedIn) return '/m/schedule'
     return '/login'
   }
+})
+
+router.afterEach((to) => {
+  const t = to.meta?.title
+  document.title = t ? `${t} · ${SITE}` : SITE
 })
 
 export default router
