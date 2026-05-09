@@ -8,16 +8,28 @@ import { safeSrc } from '../../composables/security.js'
 const orders = ref([])
 const members = ref({})
 const loading = ref(false)
+// dialog 显示用 boolean 控制，url 单独存一个字段。
+// 历史 bug：之前 v-model 绑了 url 字符串，关闭 dialog 时被改写为 boolean false，
+// 加上 :title="false" 在某些渲染时机被当字符串显示，弹出"false"白框。
+const showPreview = ref(false)
 const previewUrl = ref('')
+
+function openPreview(url) {
+  previewUrl.value = url
+  showPreview.value = true
+}
 
 async function load() {
   loading.value = true
   try {
     orders.value = await api.get('/admin/orders/pending')
     if (orders.value.length) {
-      const m = await api.get('/admin/members', { params: { size: 500 } })
+      // backend 限制 size ≤ 200，原写 500 会 422。这里 200 已够；如未来超过，需改分页。
+      const m = await api.get('/admin/members', { params: { size: 200 } })
       members.value = Object.fromEntries(m.items.map(u => [u.id, u]))
     }
+  } catch (e) {
+    ElMessage.error(e.message || '加载失败')
   } finally { loading.value = false }
 }
 
@@ -91,7 +103,7 @@ onMounted(load)
 
           <div class="o-proof">
             <div class="proof-label">付款凭证</div>
-            <div v-if="safeSrc(o.payment_proof)" class="proof-img" @click="previewUrl = o.payment_proof">
+            <div v-if="safeSrc(o.payment_proof)" class="proof-img" @click="openPreview(o.payment_proof)">
               <img :src="safeSrc(o.payment_proof)" />
               <div class="proof-hint">点击放大</div>
             </div>
@@ -109,7 +121,7 @@ onMounted(load)
     </el-card>
 
     <!-- 截图预览 -->
-    <el-dialog v-model="previewUrl" :title="false" width="80%" :show-close="true" align-center>
+    <el-dialog v-model="showPreview" title="付款凭证" width="80%" :show-close="true" align-center>
       <img v-if="safeSrc(previewUrl)" :src="safeSrc(previewUrl)" style="width: 100%; display: block" />
     </el-dialog>
 
