@@ -15,9 +15,21 @@ log() { echo "[$(ts)] $1"; }
 
 log "===== Deploying $(git rev-parse --short HEAD 2>/dev/null || echo unknown) ====="
 
-# ---------- 1. 拉最新代码 ----------
+# ---------- 1. 拉最新代码（带 retry 应对家宽 ISP 的 TLS 握手抖动） ----------
 log "[1/5] git fetch..."
-git fetch origin --depth=1
+fetch_ok=0
+for attempt in 1 2 3; do
+  if git fetch origin --depth=1 main; then
+    fetch_ok=1
+    break
+  fi
+  log "    git fetch 失败（第 $attempt 次），5 秒后重试..."
+  sleep 5
+done
+if [ "$fetch_ok" -ne 1 ]; then
+  log "    git fetch 重试 3 次仍失败，部署中止"
+  exit 1
+fi
 git reset --hard origin/main
 log "    HEAD: $(git log -1 --format='%h %s')"
 
