@@ -3,8 +3,25 @@ import { useAuth } from '../stores/auth'
 
 const SITE = '云舍约课'
 
+// 根路径按已登录用户的角色决定默认入口：
+//   未登录 → 登录页
+//   admin/staff/coach → 后台
+//   member 或解析失败 → H5 会员端
+// 不能在这里 useAuth()，因为 router 实例创建时 pinia 还没装上，直接读 localStorage。
+function rootRedirect() {
+  const raw = localStorage.getItem('user')
+  if (!raw) return '/login'
+  try {
+    const user = JSON.parse(raw)
+    if (['admin', 'staff', 'coach'].includes(user?.role)) return '/admin/dashboard'
+    return '/m/home'
+  } catch {
+    return '/login'
+  }
+}
+
 const routes = [
-  { path: '/', redirect: '/m/home' },
+  { path: '/', redirect: rootRedirect },
   { path: '/login', component: () => import('../pages/Login.vue'), meta: { title: '登录' } },
 
   {
