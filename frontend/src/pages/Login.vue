@@ -28,7 +28,10 @@ async function submit() {
     } else {
       user = await auth.register(phone.value, password.value, name.value || phone.value)
     }
-    if (['admin', 'staff', 'coach'].includes(user.role)) {
+    // admin/staff 进后台；coach + member 进 H5。
+    // 当前 coach 没有专属视角，且 router 守卫 requireStaff 不含 coach，
+    // 把 coach 推到 admin 也会被弹回 /m/schedule —— 直接跳过去省一次重定向。
+    if (['admin', 'staff'].includes(user.role)) {
       router.replace('/admin/dashboard')
     } else {
       router.replace('/m/schedule')
