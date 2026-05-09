@@ -16,7 +16,7 @@ const loading = ref(true)
 async function load() {
   try {
     profile.value = await api.get(`/coaches/${route.params.id}/profile`)
-  } catch (e) { showFailToast(e.message) } finally { loading.value = false }
+  } catch (e) { showFailToast(e.message || '操作失败') } finally { loading.value = false }
 }
 
 const initial = computed(() => profile.value?.name?.[0] || '?')
@@ -52,7 +52,7 @@ async function book(s) {
     const r = await api.post('/bookings', { session_id: s.id })
     showSuccessToast(r.message || '预约成功')
     await load()
-  } catch (e) { showFailToast(e.message) }
+  } catch (e) { showFailToast(e.message || '操作失败') }
 }
 
 onMounted(load)

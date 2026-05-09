@@ -70,7 +70,7 @@ async function cancel(b) {
     if (r.status === 'late_cancelled') showToast('超时取消，未返还卡次')
     else showSuccessToast('已取消')
     await load()
-  } catch (e) { showFailToast(e.message) }
+  } catch (e) { showFailToast(e.message || '操作失败') }
 }
 
 async function openCheckInQR(b) {
@@ -95,7 +95,7 @@ async function refreshQR(b) {
     if (qrUrl.value) URL.revokeObjectURL(qrUrl.value)
     qrUrl.value = URL.createObjectURL(await r.blob())
   } catch (e) {
-    showFailToast(e.message)
+    showFailToast(e.message || '操作失败')
     showQR.value = false
   }
 }
@@ -119,7 +119,7 @@ async function openPoster(b) {
     const blob = await r.blob()
     posterUrl.value = URL.createObjectURL(blob)
   } catch (e) {
-    showFailToast(e.message)
+    showFailToast(e.message || '操作失败')
     showPoster.value = false
   } finally { posterLoading.value = false }
 }
@@ -151,7 +151,7 @@ async function submitEval() {
     showSuccessToast('谢谢你的评价')
     showEval.value = false
     await load()
-  } catch (e) { showFailToast(e.message) }
+  } catch (e) { showFailToast(e.message || '操作失败') }
 }
 
 const STATUS = {

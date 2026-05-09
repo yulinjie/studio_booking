@@ -54,7 +54,7 @@ async function book(s) {
     const r = await api.post('/bookings', { session_id: s.id })
     showSuccessToast(r.message || '预约成功')
     await load()
-  } catch (e) { showFailToast(e.message) }
+  } catch (e) { showFailToast(e.message || '操作失败') }
 }
 
 onMounted(load)

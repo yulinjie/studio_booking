@@ -177,7 +177,21 @@ def book(
     else:
         card = _pick_usable_card(session, member.id, course, category)
         if not card:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "没有可用的卡，请先购卡")
+            # 区分两种情况，给前端更准确的提示：
+            # 1. 完全没有任何 active 卡 → 引导购卡
+            # 2. 有 active 卡但都不适用于此课程 → 提示"现有卡不适用"
+            any_active = session.exec(
+                select(MemberCard).where(
+                    MemberCard.member_id == member.id,
+                    MemberCard.status == CardStatus.active,
+                )
+            ).first()
+            if not any_active:
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "没有可用的卡，请先购卡")
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                f"你现有的卡都不适用于「{category.name}」类型的课，请购买适用的卡",
+            )
 
     # 期限卡日上限检查
     if card.type == CardType.period and card.daily_limit > 0:

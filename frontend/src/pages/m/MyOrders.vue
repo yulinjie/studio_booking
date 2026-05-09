@@ -38,7 +38,7 @@ async function cancel(o) {
     await api.post(`/me/orders/${o.id}/cancel`)
     showSuccessToast('已取消')
     await load()
-  } catch (e) { showFailToast(e.message) }
+  } catch (e) { showFailToast(e.message || '操作失败') }
 }
 
 async function reuploadProof(o, file) {

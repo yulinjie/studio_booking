@@ -87,13 +87,34 @@ async function book(s) {
   const cName = courseName(s.course_id)
   const credit = courseCredit(s.course_id)
 
-  // 预检：没有任何 active 卡 → 直接引导去购卡，不发请求避免后端 400
-  const hasActiveCard = myCards.value.some((c) => c.status === 'active')
-  if (!hasActiveCard) {
+  // 预检 1：没有任何 active 卡 → 引导购卡
+  const activeCards = myCards.value.filter((c) => c.status === 'active')
+  if (!activeCards.length) {
     try {
       await showDialog({
         title: '还没有可用的卡',
         message: '约课需要先购卡。要现在去购卡吗？',
+        showCancelButton: true,
+        confirmButtonText: '去购卡',
+        confirmButtonColor: '#88958D',
+      })
+      router.push('/m/buy-card')
+    } catch { /* 用户点取消 */ }
+    return
+  }
+
+  // 预检 2：有卡但没有适用于该课程类型的卡 → 提示明确的不匹配原因
+  const courseObj = findCourse(s.course_id)
+  const courseCatId = courseObj?.category_id
+  const usable = activeCards.filter(
+    (c) => !c.applicable_category_id || c.applicable_category_id === courseCatId,
+  )
+  if (!usable.length) {
+    const catName = categoryLabel(s.course_id) || '该类型'
+    try {
+      await showDialog({
+        title: '当前卡不适用',
+        message: `这节课是「${catName}」，你名下的卡都不适用于此类型。要去购买适用的卡吗？`,
         showCancelButton: true,
         confirmButtonText: '去购卡',
         confirmButtonColor: '#88958D',
@@ -131,11 +152,19 @@ async function cancel(s) {
     if (r.status === 'late_cancelled') showToast('超时取消，未返还卡次')
     else showSuccessToast('已取消')
     await load()
-  } catch (e) { showFailToast(e.message) }
+  } catch (e) { showFailToast(e.message || '操作失败') }
 }
 
 function isPast(s) { return dayjs(s.start_at).isBefore(dayjs()) }
 function isFull(s) { return s.booked_count >= s.capacity }
+
+// 整张课卡点击：等同点"预约"按钮（已预约/已结束的不响应）
+function onCardClick(s) {
+  if (isPast(s)) return
+  if (s.status !== 'scheduled') return
+  if (myBooking(s.id)) return // 已预约 → 让用户用右侧"取消"按钮
+  book(s)
+}
 function statusText(s) {
   const b = myBooking(s.id)
   if (b?.status === 'waitlist') return `候补#${b.waitlist_order}`
@@ -172,7 +201,13 @@ v-for="d in days" :key="d.offset"
     <div class="list">
       <EmptyState v-if="!sessions.length" illust="calendar" title="这天没有排课" sub="切换其他日期看看" />
 
-      <div v-for="s in sessions" :key="s.id" class="card" :class="{ past: isPast(s), full: isFull(s) && !myBooking(s.id) }">
+      <div
+        v-for="s in sessions"
+        :key="s.id"
+        class="card"
+        :class="{ past: isPast(s), full: isFull(s) && !myBooking(s.id), clickable: !isPast(s) && s.status === 'scheduled' && !myBooking(s.id) }"
+        @click="onCardClick(s)"
+      >
         <div v-if="courseCover(s.course_id)" class="cover" :style="{ backgroundImage: `url(${courseCover(s.course_id)})` }">
           <div class="cover-mask"></div>
           <span class="cat-badge cat-badge-img">{{ categoryLabel(s.course_id) }}</span>
@@ -210,8 +245,8 @@ v-for="d in days" :key="d.offset"
             <div v-if="statusText(s)" class="status-tag" :class="{ 'is-booked': !!myBooking(s.id), 'is-past': isPast(s) }">
               {{ statusText(s) }}
             </div>
-            <van-button v-if="myBooking(s.id) && !isPast(s)" size="small" plain type="danger" round @click="cancel(s)">取消</van-button>
-            <van-button v-else-if="!isPast(s) && s.status === 'scheduled'" size="small" type="primary" round @click="book(s)">
+            <van-button v-if="myBooking(s.id) && !isPast(s)" size="small" plain type="danger" round @click.stop="cancel(s)">取消</van-button>
+            <van-button v-else-if="!isPast(s) && s.status === 'scheduled'" size="small" type="primary" round @click.stop="book(s)">
               {{ isFull(s) ? '候补' : '预约' }}
             </van-button>
           </div>
@@ -302,6 +337,8 @@ v-for="d in days" :key="d.offset"
 }
 .card.past { opacity: 0.55; }
 .card.full { background: linear-gradient(180deg, #FFFFFF, #F8F2EC); }
+.card.clickable { cursor: pointer; }
+.card.clickable:active { transform: scale(0.99); box-shadow: 0 2px 8px rgba(63, 60, 58, 0.08); }
 
 .cover {
   height: 100px;

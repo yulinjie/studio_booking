@@ -94,7 +94,7 @@ async function handleProofUpload(file) {
   } catch (e) {
     clearTimeout(timer)
     closeToast()
-    showFailToast(e.name === 'AbortError' ? '上传超时（30s），请检查网络后重试' : e.message)
+    showFailToast(e.name === 'AbortError' ? '上传超时（30s），请检查网络后重试' : (e.message || '上传失败'))
     // 失败时清空 uploader 让用户能再试
     uploadedFiles.value = []
   }
@@ -107,7 +107,12 @@ async function submitProof() {
     await api.patch(`/me/orders/${orderId.value}`, { payment_proof: proofUrl.value })
     showSuccessToast('已提交，等待审核')
     setTimeout(() => router.replace('/m/my-orders'), 1000)
-  } catch (e) { showFailToast(e.message) } finally { submitting.value = false }
+  } catch (e) {
+    console.error('[BuyCard.submitProof]', e)
+    showFailToast(e.message || '提交失败，请稍后重试')
+  } finally {
+    submitting.value = false
+  }
 }
 
 function back() {

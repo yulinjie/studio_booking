@@ -32,7 +32,7 @@ async function save() {
     localStorage.setItem('user', JSON.stringify(auth.user))
     editing.value = false
     showSuccessToast('已保存')
-  } catch (e) { showFailToast(e.message) }
+  } catch (e) { showFailToast(e.message || '操作失败') }
 }
 
 // Vant 4 的 before-close 返回 boolean / Promise<boolean>：
