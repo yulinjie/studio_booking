@@ -1,18 +1,29 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import api from '../../api/client'
 import { useMemberDetail } from '../../composables/useMemberDetail.js'
 import MemberEditDialog from '../../components/admin/MemberEditDialog.vue'
 import MemberCardDialogs from '../../components/admin/MemberCardDialogs.vue'
+import MemberBookSessionDialog from '../../components/admin/MemberBookSessionDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
 const memberId = Number(route.params.id)
 
-const { member, cards, templates, load } = useMemberDetail(memberId)
+const {
+  member,
+  cards,
+  templates,
+  bookings,
+  courses,
+  coaches,
+  categories,
+  bookingDisplayList,
+  load,
+} = useMemberDetail(memberId)
 
 const showEditMember = ref(false)
 const showIssue = ref(false)
@@ -20,6 +31,7 @@ const showAdjust = ref(false)
 const showTopup = ref(false)
 const showRefund = ref(false)
 const showTx = ref(false)
+const showBookSession = ref(false)
 const activeCard = ref(null)
 
 function openCardDialog(which, card) {
@@ -43,6 +55,54 @@ async function unfreeze(card) {
 
 function onMemberSaved(updated) {
   member.value = updated
+}
+
+// === 预约相关 actions ===
+
+async function checkInBooking(b) {
+  try {
+    await api.post('/admin/check-in', { booking_id: b.id })
+    ElMessage.success('已签到')
+    await load()
+  } catch (e) {
+    ElMessage.error(e.message || '签到失败')
+  }
+}
+
+async function cancelBooking(b) {
+  try {
+    await ElMessageBox.confirm(
+      `代会员取消「${b.courseName}」(${dayjs(b.startAt).format('M-D HH:mm')})？\n店长代取消会全额返还卡次。`,
+      '确认代取消',
+      { type: 'warning', confirmButtonText: '确认取消', cancelButtonText: '我再想想' },
+    )
+  } catch {
+    return
+  }
+  try {
+    await api.post(`/bookings/${b.id}/cancel`)
+    ElMessage.success('已取消，卡次已退还')
+    await load()
+  } catch (e) {
+    ElMessage.error(e.message || '取消失败')
+  }
+}
+
+const STATUS_TEXT = {
+  booked: '已预约',
+  waitlist: '候补中',
+  attended: '已上课',
+  cancelled: '已取消',
+  late_cancelled: '超时取消',
+  no_show: '爽约',
+}
+const STATUS_TYPE = {
+  booked: 'success',
+  waitlist: 'warning',
+  attended: '',
+  cancelled: 'info',
+  late_cancelled: 'danger',
+  no_show: 'danger',
 }
 
 onMounted(load)
@@ -154,6 +214,63 @@ onMounted(load)
     </el-table>
   </el-card>
 
+  <!-- 她的预约 -->
+  <el-card style="margin-bottom: 16px">
+    <template #header>
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <b>她的预约（{{ bookings.filter(b => ['booked','waitlist'].includes(b.status)).length }} 条进行中 · {{ bookings.length }} 条总计）</b>
+        <el-button type="primary" size="small" @click="showBookSession = true">+ 代约课</el-button>
+      </div>
+    </template>
+    <el-table :data="bookingDisplayList" empty-text="该会员还没有预约">
+      <el-table-column label="时间" width="180">
+        <template #default="{ row }">
+          <span v-if="row.startAt">{{ dayjs(row.startAt).format('M-D ddd HH:mm') }}</span>
+          <span v-else style="color: #999">未知</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="课程">
+        <template #default="{ row }">
+          {{ row.courseName }}
+          <span v-if="row.room" style="color: #888; font-size: 11px">· {{ row.room }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="教练" width="120">
+        <template #default="{ row }">{{ row.coachName || '-' }}</template>
+      </el-table-column>
+      <el-table-column label="状态" width="100">
+        <template #default="{ row }">
+          <el-tag size="small" :type="STATUS_TYPE[row.status]">
+            {{ STATUS_TEXT[row.status] || row.status }}
+            <span v-if="row.waitlist_order">#{{ row.waitlist_order }}</span>
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="180">
+        <template #default="{ row }">
+          <el-button
+            v-if="row.status === 'booked'"
+            size="small"
+            link
+            type="primary"
+            @click="checkInBooking(row)"
+          >
+            代签到
+          </el-button>
+          <el-button
+            v-if="['booked', 'waitlist'].includes(row.status)"
+            size="small"
+            link
+            type="danger"
+            @click="cancelBooking(row)"
+          >
+            代取消
+          </el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+  </el-card>
+
   <MemberEditDialog v-model="showEditMember" :member="member" @saved="onMemberSaved" />
 
   <MemberCardDialogs
@@ -166,5 +283,17 @@ onMounted(load)
     v-model:show-refund="showRefund"
     v-model:show-tx="showTx"
     @changed="load"
+  />
+
+  <MemberBookSessionDialog
+    v-model="showBookSession"
+    :member-id="memberId"
+    :member-name="member?.name || ''"
+    :cards="cards"
+    :courses="courses"
+    :coaches="coaches"
+    :categories="categories"
+    :existing-bookings="bookings"
+    @booked="load"
   />
 </template>
