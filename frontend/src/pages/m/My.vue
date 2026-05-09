@@ -35,14 +35,43 @@ async function save() {
   } catch (e) { showFailToast(e.message) }
 }
 
-async function changePassword() {
-  if (pwd.value.new_password !== pwd.value.confirm) return showFailToast('两次新密码不一致')
-  if (pwd.value.new_password.length < 4) return showFailToast('新密码至少 4 位')
+// Vant 4 的 before-close 返回 boolean / Promise<boolean>：
+//   true  → 关闭 dialog
+//   false → 不关闭（保留弹窗）
+// 旧 v3 风格的 done 回调已废弃，之前调用 done(true) 实际是 done is undefined → 卡住。
+async function onPwdBeforeClose(action) {
+  if (action === 'cancel') {
+    pwd.value = { old_password: '', new_password: '', confirm: '' }
+    return true
+  }
+  // confirm
+  if (!pwd.value.old_password) {
+    showFailToast('请填原密码')
+    return false
+  }
+  if (pwd.value.new_password !== pwd.value.confirm) {
+    showFailToast('两次新密码不一致')
+    return false
+  }
+  if (pwd.value.new_password.length < 4) {
+    showFailToast('新密码至少 4 位')
+    return false
+  }
   try {
-    await api.post('/me/change-password', { old_password: pwd.value.old_password, new_password: pwd.value.new_password })
+    await api.post('/me/change-password', {
+      old_password: pwd.value.old_password,
+      new_password: pwd.value.new_password,
+    })
     showSuccessToast('已修改，请重新登录')
-    setTimeout(() => { auth.logout(); router.replace('/login') }, 800)
-  } catch (e) { showFailToast(e.message) }
+    setTimeout(() => {
+      auth.logout()
+      router.replace('/login')
+    }, 800)
+    return true
+  } catch (e) {
+    showFailToast(e.message || '修改失败')
+    return false
+  }
 }
 
 async function logout() {
@@ -129,7 +158,13 @@ onMounted(load)
 
     <div class="footer">© 云舍 · 安静地练习</div>
 
-    <van-dialog v-model:show="showPwd" title="修改密码" show-cancel-button :before-close="(action, done) => { if (action === 'confirm') { changePassword(); done(true) } else { done(true) } }" confirm-button-color="#88958D">
+    <van-dialog
+      v-model:show="showPwd"
+      title="修改密码"
+      show-cancel-button
+      :before-close="onPwdBeforeClose"
+      confirm-button-color="#88958D"
+    >
       <van-cell-group>
         <van-field v-model="pwd.old_password" label="原密码" type="password" />
         <van-field v-model="pwd.new_password" label="新密码" type="password" />
