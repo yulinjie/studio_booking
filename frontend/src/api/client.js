@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { isCacheable, getCache, setCache, invalidate, clearCache } from './cache.js'
+import { isCacheable, getCache, setCache, clearCache } from './cache.js'
 
 const client = axios.create({ baseURL: '/api', timeout: 15000 })
 
@@ -31,14 +31,11 @@ client.interceptors.response.use(
     if (cfg.method === 'get' && isCacheable(cfg.url)) {
       setCache(cfg.url, resp.data)
     }
-    // 写请求：让相关 GET 缓存失效
+    // 写请求兜底：任何写操作都清空全部缓存。
+    // 当前缓存范围本就只是 H5 端 6 个低频读接口（见 cache.js），
+    // 全清的代价是下次 GET 重发一次请求，但能避免精细化失效写错（图1 卡种 bug）。
     if (['post', 'patch', 'delete', 'put'].includes(cfg.method)) {
-      const url = cfg.url || ''
-      if (url.includes('/courses') || url.includes('/course-categories')) invalidate('/courses')
-      if (url.includes('/coaches')) invalidate('/coaches')
-      if (url.includes('/card-templates') || url.includes('/admin/cards/'))
-        invalidate('/card-templates')
-      if (url.includes('/studio')) invalidate('/studio/config')
+      clearCache()
     }
     return resp.data
   },
