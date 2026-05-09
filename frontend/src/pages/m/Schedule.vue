@@ -18,6 +18,7 @@ const courses = ref([])
 const coaches = ref([])
 const categories = ref([])
 const myBookings = ref([])
+const myCards = ref([])
 const studio = ref({ name: '云舍', announcement: '' })
 const loading = ref(false)
 const refreshing = ref(false)
@@ -37,18 +38,20 @@ async function load() {
   loading.value = true
   try {
     const day = dayjs().add(dayOffset.value, 'day')
-    const [sess, c, co, cat, mb] = await Promise.all([
+    const [sess, c, co, cat, mb, cards] = await Promise.all([
       api.get('/sessions', { params: { start: day.startOf('day').toISOString(), end: day.endOf('day').toISOString() } }),
       courses.value.length ? Promise.resolve(courses.value) : api.get('/courses'),
       coaches.value.length ? Promise.resolve(coaches.value) : api.get('/coaches'),
       categories.value.length ? Promise.resolve(categories.value) : api.get('/course-categories'),
       api.get('/me/bookings', { params: { upcoming: true } }),
+      api.get('/me/cards').catch(() => []),
     ])
     sessions.value = sess
     courses.value = c
     coaches.value = co
     categories.value = cat
     myBookings.value = mb
+    myCards.value = cards
     if (!studio.value._loaded) {
       try { studio.value = { ...await api.get('/studio/config'), _loaded: true } } catch (e) { console.warn('[Schedule] studio config load failed:', e.message) }
     }
@@ -83,6 +86,23 @@ const myBooking = (sid) => myBookings.value.find(b => b.session_id === sid && ['
 async function book(s) {
   const cName = courseName(s.course_id)
   const credit = courseCredit(s.course_id)
+
+  // 预检：没有任何 active 卡 → 直接引导去购卡，不发请求避免后端 400
+  const hasActiveCard = myCards.value.some((c) => c.status === 'active')
+  if (!hasActiveCard) {
+    try {
+      await showDialog({
+        title: '还没有可用的卡',
+        message: '约课需要先购卡。要现在去购卡吗？',
+        showCancelButton: true,
+        confirmButtonText: '去购卡',
+        confirmButtonColor: '#88958D',
+      })
+      router.push('/m/buy-card')
+    } catch { /* 用户点取消 */ }
+    return
+  }
+
   try {
     await showDialog({
       title: '确认预约',
@@ -96,7 +116,10 @@ async function book(s) {
     const r = await api.post('/bookings', { session_id: s.id })
     showSuccessToast(r.message || '预约成功')
     await load()
-  } catch (e) { showFailToast(e.message) }
+  } catch (e) {
+    // 兜底：e.message 可能为空字符串导致 toast 看起来没出现
+    showFailToast(e.message || '预约失败，请稍后重试')
+  }
 }
 
 async function cancel(s) {

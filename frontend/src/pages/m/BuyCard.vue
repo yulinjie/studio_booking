@@ -50,9 +50,19 @@ async function submitOrder() {
   submitting.value = true
   try {
     const r = await api.post('/me/orders', { template_id: selected.value.id })
+    if (!r?.id) {
+      console.error('[BuyCard] 订单创建后返回数据异常', r)
+      showFailToast('订单创建异常，请联系工作人员')
+      return
+    }
     orderId.value = r.id
     stage.value = 'pay'
-  } catch (e) { showFailToast(e.message) } finally { submitting.value = false }
+  } catch (e) {
+    console.error('[BuyCard] 订单创建失败', e)
+    showFailToast(e.message || '创建订单失败，请稍后重试')
+  } finally {
+    submitting.value = false
+  }
 }
 
 async function handleProofUpload(file) {
