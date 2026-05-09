@@ -13,11 +13,9 @@ jobs:
 
     steps:
       - name: Run deploy script
-        id: deploy
         run: bash $HOME/studio_booking/scripts/deploy.sh
 
       - name: Smoke test
-        id: smoke
         run: |
           for i in 1 2 3 4 5 6; do
             sleep 2
@@ -29,46 +27,3 @@ jobs:
           echo "❌ studio service not responding after restart"
           sudo systemctl status studio --no-pager | tail -20
           exit 1
-
-      # 失败通知：把 webhook URL 加到 GitHub repo Settings → Secrets and variables
-      # → Actions → New repository secret，名字 NOTIFY_WEBHOOK_URL。
-      # 当前格式按企业微信群机器人写的，别的 IM（钉钉/飞书/Server酱）只需改 curl 那行 payload。
-      # secret 未配置时跳过，不影响部署本身。
-      - name: Notify on failure
-        if: failure()
-        env:
-          WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK_URL }}
-          REPO: ${{ github.repository }}
-          RUN_ID: ${{ github.run_id }}
-          SERVER: ${{ github.server_url }}
-          ACTOR: ${{ github.actor }}
-        run: |
-          if [ -z "$WEBHOOK" ]; then
-            echo "::warning::NOTIFY_WEBHOOK_URL secret 未配置，跳过失败通知"
-            exit 0
-          fi
-
-          # 拼通知内容
-          COMMIT_SHA=$(git -C "$HOME/studio_booking" rev-parse --short HEAD 2>/dev/null || echo unknown)
-          COMMIT_MSG=$(git -C "$HOME/studio_booking" log -1 --format=%s 2>/dev/null || echo "(无法读取)")
-          RUN_URL="${SERVER}/${REPO}/actions/runs/${RUN_ID}"
-
-          # 企业微信群机器人 markdown 消息
-          PAYLOAD=$(cat <<EOF
-          {
-            "msgtype": "markdown",
-            "markdown": {
-              "content": "🚨 **studio_booking 部署失败**\n>提交人：<font color=\"comment\">${ACTOR}</font>\n>HEAD：\`${COMMIT_SHA}\` ${COMMIT_MSG}\n>查看日志：[Run #${RUN_ID}](${RUN_URL})"
-            }
-          }
-          EOF
-          )
-
-          # -f 让 curl 在 4xx/5xx 时返回非零；--max-time 防止挂死
-          if curl -sf --max-time 10 -X POST "$WEBHOOK" \
-            -H "Content-Type: application/json" \
-            -d "$PAYLOAD" > /dev/null; then
-            echo "✅ 失败通知已发送"
-          else
-            echo "::warning::调用通知 webhook 失败（不影响部署）"
-          fi
