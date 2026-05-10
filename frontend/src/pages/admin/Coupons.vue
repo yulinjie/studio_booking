@@ -24,7 +24,8 @@ async function load() {
   templates.value = await api.get('/admin/coupon-templates')
   issued.value = await api.get('/admin/coupons')
   if (!members.value.length) {
-    const m = await api.get('/admin/members', { params: { role: 'member', size: 500 } })
+    // backend 限制 size ≤ 200，超过会 422
+    const m = await api.get('/admin/members', { params: { role: 'member', size: 200 } })
     members.value = m.items
   }
 }

@@ -77,7 +77,8 @@ function onAvatarSuccess(resp) {
 
 const userMap = ref({})
 async function loadUserMap() {
-  const m = await api.get('/admin/members', { params: { size: 500 } })
+  // backend 限制 size ≤ 200，超过会 422
+  const m = await api.get('/admin/members', { params: { size: 200 } })
   userMap.value = Object.fromEntries(m.items.map(u => [u.id, u]))
 }
 

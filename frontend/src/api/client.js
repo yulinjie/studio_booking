@@ -46,7 +46,24 @@ client.interceptors.response.use(
     const code = err?.code
 
     // 友好消息：优先后端 detail，其次按状态码兜底
-    let message = detail
+    // FastAPI/Pydantic 422 的 detail 是数组 [{type, loc, msg, ...}]，
+    // 直接当字符串塞 Error.message 会被 toString 成 "[object Object]"。这里展开。
+    let message
+    if (Array.isArray(detail)) {
+      message = detail
+        .map((d) => {
+          const loc = Array.isArray(d?.loc) ? d.loc.filter((p) => p !== 'body' && p !== 'query').join('.') : ''
+          const msg = d?.msg || JSON.stringify(d)
+          return loc ? `${loc}: ${msg}` : msg
+        })
+        .filter(Boolean)
+        .join('；')
+    } else if (typeof detail === 'string') {
+      message = detail
+    } else if (detail && typeof detail === 'object') {
+      // 极少见但防御：detail 是单个对象
+      message = detail.msg || detail.message || JSON.stringify(detail)
+    }
     if (!message) {
       if (code === 'ECONNABORTED') message = '请求超时，请检查网络'
       else if (code === 'ERR_NETWORK') message = '网络异常，无法连接服务器'
