@@ -49,11 +49,12 @@ export function useSchedule() {
     return { bg: c.soft, bd: c.from }
   }
 
-  // 周视图按天分组
+  // 周视图按天分组（过滤已取消的课节，老板不想看划线版）
   const sessionsByDay = computed(() => {
     const out = {}
     for (const d of days.value) out[d.format('YYYY-MM-DD')] = []
     for (const s of sessions.value) {
+      if (s.status === 'cancelled') continue
       const k = dayjs(s.start_at).format('YYYY-MM-DD')
       if (k in out) out[k].push(s)
     }

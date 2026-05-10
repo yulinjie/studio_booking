@@ -14,8 +14,23 @@ const editForm = ref({})
 
 const uploadHeaders = { Authorization: `Bearer ${localStorage.getItem('token')}` }
 
+const userMap = ref({})
+const userName = (id) => userMap.value[id]?.name || `#${id}`
+const userPhone = (id) => userMap.value[id]?.phone || ''
+const userAvatar = (id) => userMap.value[id]?.avatar
+
 async function load() {
   coaches.value = await api.get('/coaches')
+  // 历史 bug：之前用 /admin/members?size=200 拉 userMap，但该接口只返回 role=member。
+  // 教练 (role=coach) 的 user 信息根本拿不到，所以列表显示 #user_id，
+  // 编辑面板看不到姓名/手机/头像。改成按 user_id 批量拉 /admin/members/{id}（不限 role）。
+  const userIds = [...new Set(coaches.value.map((c) => c.user_id))]
+  if (userIds.length) {
+    const users = await Promise.all(
+      userIds.map((id) => api.get(`/admin/members/${id}`).catch(() => null)),
+    )
+    userMap.value = Object.fromEntries(users.filter(Boolean).map((u) => [u.id, u]))
+  }
 }
 
 function openCreate() {
@@ -30,6 +45,9 @@ function openCreate() {
 function openEdit(coach) {
   editing.value = coach
   editForm.value = {
+    // User 字段（avatar 走 /admin/members PATCH，独立提交）
+    avatar: userAvatar(coach.user_id) || '',
+    // Coach 字段（走 /admin/coaches PATCH）
     title: coach.title || '',
     bio: coach.bio || '',
     specialties: coach.specialties || '',
@@ -44,11 +62,25 @@ function openEdit(coach) {
 
 async function saveEdit() {
   try {
-    await api.patch(`/admin/coaches/${editing.value.id}`, editForm.value)
+    const userId = editing.value.user_id
+    const originalAvatar = userAvatar(userId) || ''
+    const newAvatar = editForm.value.avatar || ''
+
+    // 1. 头像有变更 → 单独 PATCH user
+    if (newAvatar !== originalAvatar) {
+      await api.patch(`/admin/members/${userId}`, { avatar: newAvatar })
+    }
+
+    // 2. Coach 表字段
+    const { avatar: _ignore, ...coachFields } = editForm.value
+    await api.patch(`/admin/coaches/${editing.value.id}`, coachFields)
+
     ElMessage.success('已保存')
     showEdit.value = false
     await load()
-  } catch (e) { ElMessage.error(e.message) }
+  } catch (e) {
+    ElMessage.error(e.message || '保存失败')
+  }
 }
 
 async function save() {
@@ -61,13 +93,16 @@ async function save() {
     const created = await api.post('/admin/coaches', body)
     // 上传的头像存在 user.avatar 上
     if (form.value.avatar && created.user_id) {
-      await api.patch(`/admin/members/${created.user_id}`, { avatar: form.value.avatar }).catch(() => {})
+      await api
+        .patch(`/admin/members/${created.user_id}`, { avatar: form.value.avatar })
+        .catch((e) => console.warn('[Coaches] 头像保存失败:', e.message))
     }
     ElMessage.success('教练已添加')
     showCreate.value = false
-    await loadUserMap()
     await load()
-  } catch (e) { ElMessage.error(e.message) }
+  } catch (e) {
+    ElMessage.error(e.message || '添加失败')
+  }
 }
 
 function onAvatarSuccess(resp) {
@@ -75,18 +110,12 @@ function onAvatarSuccess(resp) {
   ElMessage.success('头像已上传')
 }
 
-const userMap = ref({})
-async function loadUserMap() {
-  // backend 限制 size ≤ 200，超过会 422
-  const m = await api.get('/admin/members', { params: { size: 200 } })
-  userMap.value = Object.fromEntries(m.items.map(u => [u.id, u]))
+function onEditAvatarSuccess(resp) {
+  editForm.value.avatar = resp.url
+  ElMessage.success('头像已上传，点保存生效')
 }
 
-const userName = (id) => userMap.value[id]?.name || `#${id}`
-const userPhone = (id) => userMap.value[id]?.phone || ''
-const userAvatar = (id) => userMap.value[id]?.avatar
-
-onMounted(async () => { await loadUserMap(); await load() })
+onMounted(load)
 </script>
 
 <template>
@@ -191,6 +220,49 @@ onMounted(async () => { await loadUserMap(); await load() })
 
     <el-dialog v-model="showEdit" :title="`编辑教练 ${userName(editing?.user_id)}`" width="500px">
       <el-form v-if="editing" label-width="100px">
+        <el-form-item label="基本信息">
+          <div style="display: flex; align-items: center; gap: 12px; width: 100%">
+            <img
+              v-if="safeSrc(editForm.avatar)"
+              :src="safeSrc(editForm.avatar)"
+              style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 1px solid var(--ys-line)"
+            />
+            <div
+              v-else
+              style="width: 56px; height: 56px; border-radius: 50%; background: var(--ys-bg-soft); display: flex; align-items: center; justify-content: center; color: var(--ys-text-muted); font-size: 22px"
+            >
+              {{ userName(editing.user_id)[0] }}
+            </div>
+            <div>
+              <div style="font-size: 14px">{{ userName(editing.user_id) }}</div>
+              <div style="color: var(--ys-text-muted); font-size: 12px; font-variant-numeric: tabular-nums">
+                {{ userPhone(editing.user_id) }}
+              </div>
+            </div>
+          </div>
+        </el-form-item>
+        <el-form-item label="头像">
+          <el-upload
+            action="/api/admin/upload"
+            :headers="uploadHeaders"
+            :show-file-list="false"
+            :on-success="onEditAvatarSuccess"
+            name="file"
+            accept="image/*"
+          >
+            <el-button size="small">{{ editForm.avatar ? '更换头像' : '上传头像' }}</el-button>
+          </el-upload>
+          <el-button
+            v-if="editForm.avatar"
+            size="small"
+            link
+            type="danger"
+            style="margin-left: 8px"
+            @click="editForm.avatar = ''"
+          >
+            清除
+          </el-button>
+        </el-form-item>
         <el-form-item label="头衔"><el-input v-model="editForm.title" /></el-form-item>
         <el-form-item label="擅长"><el-input v-model="editForm.specialties" placeholder="多个用逗号分隔" /></el-form-item>
         <el-form-item label="简介"><el-input v-model="editForm.bio" type="textarea" :rows="3" /></el-form-item>
